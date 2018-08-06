@@ -1,0 +1,127 @@
+type:
+	Party
+is:
+	Address
+
+type:
+	Buyer, Seller, BuyerRep, SellerRep
+is: 
+	machine with:
+		Party: this
+		bool: sentCloseRequest
+	
+type:
+	Document
+is:
+	machine with:
+		Hash: this
+		Signature: buyer, seller, buyerRep, sellerRep
+		Party: rejecter
+	start:
+		initialise
+	state: initialise
+		switch input:
+			case sign(Buyer:x):
+				if buyer: throw "buyer already signed"
+				halt
+			case sign(Seller:x):
+				if seller: throw "seller already signed"
+				halt
+			case sign(BuyerRep:x):
+				if buyerRep: throw "buyerRep already signed"
+				halt
+			case sign(SellerRep:x):
+				if sellerRep: throw "sellerRep already signed"
+				halt
+			case reject(Party:x):
+				rejecter = x
+				goto rejected
+		if buyer and seller and buyerRep and sellerRep: goto sealed
+	state: sealed
+	state: rejected
+	
+operator:
+	no
+when:
+	no *:x
+is:
+	not any x	
+
+machine:
+	conveyancing contract
+with: 
+	Buyer: buyer
+	Seller: seller
+	BuyerRep: buyerRep
+	SellerRep: sellerRep
+	List of Document: documents 
+start:
+	initialise
+	
+state: initialise
+	switch input:
+		case setBuyerRep(BuyerRep:x):
+			if buyerRep: throw "already set buyerRep"
+			buyerRep = x
+			halt
+		case setSellerRep(SellerRep:x):
+			if sellerRep: throw "already set sellerRep"
+			sellerRep = x
+			halt
+	if buyerRep and sellerRep: goto register
+
+state: register
+	switch input:
+		case registerBuyer(Buyer:x):
+			if buyer: throw "already set buyer"
+			buyer = x
+			halt
+		case registerSeller(Seller:x):
+			if seller: throw "already set seller"
+			seller = x
+			halt
+	if buyer and seller: goto active
+
+state: active
+	switch input:
+		case addDocument(Document:x):
+			if any documents == x: throw "document already registered"
+			add x to documents
+			halt
+		case signDocument(Document:x, Party:y):
+			if no documents == x: throw "no document registered"
+			if documents:x is rejected: throw "document is rejected"
+			switch y:
+				case Buyer:
+					if documents:x.buyer: throw "buyer already signed"
+					documents:x.buyer = y
+					halt
+				case Seller:
+					if documents:x.seller: throw "seller already signed"
+					documents:x.seller = y
+					halt
+				case BuyerRep:
+					if documents:x.buyerRep: throw "buyerRep already signed"
+					documents:x.buyerRep = y
+					halt
+				case SellerRep:
+					if documents:x.sellerRep: throw "sellerRep already signed"
+					documents:x.sellerRep = y
+					halt
+		case close(Party:x):
+			if any documents not .sealed: throw "cannot close a contract with unsealed documents"
+			switch x:
+				case Buyer:
+					buyer.sentCloseRequest = true
+					halt
+				case Seller:
+					seller.sentCloseRequest = true
+					halt
+				case BuyerRep:
+					buyerRep.sentCloseRequest = true
+					halt
+				case SellerRep:
+					sellerRep.sentCloseRequest = true
+					halt
+			if all [buyer, seller, buyerRep, sellerRep].sentCloseRequest: goto closed
+state: closed
