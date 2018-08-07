@@ -19,7 +19,7 @@ is:
 		Party: rejecter
 	start:
 		initialise
-	state: initialise
+	state initialise:
 		switch input:
 			case sign(Buyer:x):
 				if buyer: throw "buyer already signed"
@@ -37,8 +37,8 @@ is:
 				rejecter = x
 				goto rejected
 		if buyer and seller and buyerRep and sellerRep: goto sealed
-	state: sealed
-	state: rejected
+	state sealed:
+	state rejected:
 	
 operator:
 	no
@@ -58,7 +58,7 @@ with:
 start:
 	initialise
 	
-state: initialise
+state initialise:
 	switch input:
 		case setBuyerRep(BuyerRep:x):
 			if buyerRep: throw "already set buyerRep"
@@ -70,7 +70,7 @@ state: initialise
 			halt
 	if buyerRep and sellerRep: goto register
 
-state: register
+state register:
 	switch input:
 		case registerBuyer(Buyer:x):
 			if buyer: throw "already set buyer"
@@ -82,7 +82,7 @@ state: register
 			halt
 	if buyer and seller: goto active
 
-state: active
+state active:
 	switch input:
 		case addDocument(Document:x):
 			if any documents == x: throw "document already registered"
@@ -124,4 +124,4 @@ state: active
 					sellerRep.sentCloseRequest = true
 					halt
 			if all [buyer, seller, buyerRep, sellerRep].sentCloseRequest: goto closed
-state: closed
+state closed:

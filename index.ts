@@ -130,6 +130,15 @@ const rule:Function = (...patterns:any[]):any => {
         predicates.yielder = handler;
         return predicates;
     };
+    // this is not ideal
+    predicates.append = (...patterns:any[]):any => {
+        let newpredicates:any = ensurePredicates(...patterns);
+        for (var newpredicate of newpredicates) {
+            predicates.push(newpredicate);
+        }
+        return predicates;
+    };
+    //
     return predicates;
 };
 
@@ -292,6 +301,8 @@ let getIndent:any = (input:Input):Result => {
     return Result.fault(input);
 };
 
+let lit_or_name:RegExp = /[a-z0-9][a-z0-9_\.]*/i;
+
 let IND_WS:any = rule(spaces, optional(IND));
 let ANY_WS:any = rule(/[\t\r\n\s]*/);
 let infix_comma:any = rule(/\s*,\s*/);
@@ -304,6 +315,26 @@ let membername:any = token("membername", /\w+/);
 let membernames:any = rule(membername, many(optional(infix_comma, membername)));
 
 let startstate:any = token("startstate", /\w+/);
+let statename:any = token("statename", /w+/);
+
+let arg:any = rule(token("arg", lit_or_name));
+let args:any = rule(arg, many(infix_comma, arg));
+
+let type_arg:any = rule(token("arg_t", lit_or_name), ":", token("arg_n", lit_or_name));
+let type_args:any = rule(type_arg, many(infix_comma, type_arg));
+
+let op:any = rule(spaces, token("op", /\=|\+\=|\-\=|and|or|not|xor/), spaces);
+let expr_assign:any = rule(token("lhs", /w+/), op, token("rhs", /w+/));
+let expr_call:any = rule(token("method", /w+/), "(", either(type_args, args), ")", ":");
+let expr_op:any = rule(op, token("rhs", /w+/));
+
+let stmt_expression:any = rule(either(expr_assign, expr_call, expr_op));
+let stmt_case:any = rule(IND_WS, "case", spaces, stmt_expression, ":", /*statements*/);
+let stmts_case:any = rule(many(stmt_case));
+let stmt_switch:any = rule("switch", spaces, token("switchinput", lit_or_name), ":", stmts_case);
+let statements:any = rule(either(stmt_switch));
+// this is probably not a "nice" way to do this
+stmt_case.append(statements);
 
 let typedef:any = rule(
     ANY_WS,
@@ -322,7 +353,11 @@ let typedef:any = rule(
         /\s*\:\s*/,
         membernames
     )),
-    optional(IND_WS, "start:", IND_WS, startstate)
+    optional(IND_WS, "start:", IND_WS, startstate),
+    optional(IND_WS, "state", spaces, statename, ":", IND_WS, many(
+        optional(getIndent),
+        statements,
+    ))
 ).yields(prettyprint);
 
 let typedefs:any = rule(many(typedef, optional(ANY_WS)));
