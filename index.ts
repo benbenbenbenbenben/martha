@@ -93,27 +93,34 @@ const parse:Function = (source:string) => (...rules:any[]):any => {
     // each rule is a predicate[]
     let input:Input = new Input(source);
     for (let rule of rules) {
-        let tokens:ResultTokens = new ResultTokens();
-        let ref:number = input.begin(tokens);
-        let x:any;
-        let matches:Result[] = [];
-        for (let predicate of rule) {
-            x = input.consume(predicate);
-            matches.push(x);
-            if (x.success === false) {
-                break;
-            }
-        }
-        if (x.success === false) {
-            input.rewind(ref);
+        if (parserule(input, rule) === false) {
             break;
         }
-        // console.log(JSON.stringify(matches, null, 2));
-        if (rule.yielder) {
-            rule.yielder(tokens.tokens);
-        }
-        // rule(...matches);
     }
+};
+
+const parserule:Function = (input:Input, rule:any):any => {
+    let tokens:ResultTokens = new ResultTokens();
+    let ref:number = input.begin(tokens);
+    let x:any;
+    let matches:Result[] = [];
+    for (let predicate of rule) {
+        x = input.consume(predicate);
+        matches.push(x);
+        if (x.success === false) {
+            break;
+        }
+    }
+    if (x.success === false) {
+        input.rewind(ref);
+        return false;
+    }
+    // console.log(JSON.stringify(matches, null, 2));
+    if (rule.yielder) {
+        rule.yielder(tokens);
+    }
+    return true;
+    // rule(...matches);
 };
 
 const rule:Function = (...patterns:any[]):any => {
@@ -220,9 +227,22 @@ const ensurePredicates:Function = (...patterns:any[]):Function[] => {
             };
             case "Function":
             return pattern;
-            // subrule case
+            // subrule case, trampoline time!
             case "Array":
-            return all(...pattern);
+            return (input:Input):Result => {
+                if (pattern.yielder) {
+                    const frozentokens:ResultTokens = input.tokens;
+                    input.tokens = new ResultTokens();
+                    const result:any = all(...pattern)(input);
+                    if (result.success) {
+                        pattern.yielder(input.tokens);
+                    }
+                    input.tokens = frozentokens;
+                    return result;
+                } else {
+                    return all(...pattern)(input);
+                }
+            };
             default:
             throw new Error("oops");
         }
@@ -241,17 +261,18 @@ const token:Function = (name:string, pattern:any):any => {
     return pattern[0];
 };
 
-let infix_whitespace:any = rule(spaces, optional(newline, indent));
-let any_whitespace:any = rule(/[\t\r\n\s]*/);
+let prettyprint:any = (x:any) => console.log(JSON.stringify(x, null, 2));
+
+let INF_WS:any = rule(spaces, optional(newline, indent));
+let ANY_WS:any = rule(/[\t\r\n\s]*/);
 let infix_comma:any = rule(/\s*,\s*/);
 
 let typename:any = token("typename", /\w+/);
 let typenames:any = rule(typename, many(optional(infix_comma, typename)));
 let basetypename:any = token("basetypename", /\w+/);
-let typedef:any = rule("type:", infix_whitespace, typenames, optional(any_whitespace, "is:", infix_whitespace, basetypename));
-let typedefs:any = rule(many(typedef, optional(any_whitespace)));
 
-let prettyprint:any = (x:any) => console.log(JSON.stringify(x, null, 2));
+let typedef:any = rule("type:", INF_WS, typenames, optional(ANY_WS, "is:", INF_WS, basetypename)).yields(prettyprint);
+let typedefs:any = rule(many(typedef, optional(ANY_WS)));
 
 let source:string = `type:
     Party
@@ -269,6 +290,6 @@ is:
 parse(source)
 (
     rule(typedefs).yields(prettyprint),
-    rule("operator:", infix_whitespace, /\w+/, /\w+/)
+    rule("operator:", INF_WS, /\w+/, /\w+/)
 );
 
