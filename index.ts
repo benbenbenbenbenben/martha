@@ -167,6 +167,20 @@ const optional:Function = (...patterns:any[]):(input:Input) => Result => {
     };
 };
 
+const either:Function = (...patterns:any[]):(input:Input) => Result => {
+    return (input:Input):Result => {
+        let outcome:Result = Result.fault(input);
+        for (let pattern of ensurePredicates(patterns)) {
+            let current:Result = input.consume(pattern);
+            if (current.success) {
+                outcome = current;
+                break;
+            }
+        }
+        return outcome;
+    };
+};
+
 const many:Function = (...patterns:any[]):(input:Input) => Result => {
     return (input:Input):Result => {
         let location:number;
@@ -189,10 +203,6 @@ const many:Function = (...patterns:any[]):(input:Input) => Result => {
         return Result.composite(...consumed);
     };
 };
-
-const spaces:RegExp = /[ \t]*/;
-const newline:RegExp = /\r\n|\r|\n/;
-const indent:RegExp = /^[ \t]+/;
 
 const ensurePredicates:Function = (...patterns:any[]):Function[] => {
     return patterns.map(pattern => {
@@ -263,33 +273,75 @@ const token:Function = (name:string, pattern:any):any => {
 
 let prettyprint:any = (x:any) => console.log(JSON.stringify(x, null, 2));
 
-let INF_WS:any = rule(spaces, optional(newline, indent));
+
+const spaces:RegExp = /[ \t]*/;
+const newline:RegExp = /\r\n|\r|\n/;
+const indent:any = token("indent", /^[ \t]+/);
+
+let _INDENT:string = "";
+
+let IND:any = rule(newline, indent).yields((x:any) => {
+    _INDENT = x.tokens[0].result.value;
+});
+let getIndent:any = (input:Input):Result => {
+    let index:number = input.source.substring(input.location).indexOf(_INDENT);
+    if (index === 0) {
+        input.location += _INDENT.length;
+        return Result.pass(input);
+    }
+    return Result.fault(input);
+};
+
+let IND_WS:any = rule(spaces, optional(IND));
 let ANY_WS:any = rule(/[\t\r\n\s]*/);
 let infix_comma:any = rule(/\s*,\s*/);
 
-let typename:any = token("typename", /\w+/);
-let typenames:any = rule(typename, many(optional(infix_comma, typename)));
-let basetypename:any = token("basetypename", /\w+/);
+let type:any = token("typename", /\w+/);
+let types:any = rule(type, many(optional(infix_comma, type)));
+let base:any = token("basetypename", /\w+/);
 
-let typedef:any = rule("type:", INF_WS, typenames, optional(ANY_WS, "is:", INF_WS, basetypename)).yields(prettyprint);
+let membername:any = token("membername", /\w+/);
+let membernames:any = rule(membername, many(optional(infix_comma, membername)));
+
+let startstate:any = token("startstate", /\w+/);
+
+let typedef:any = rule(
+    ANY_WS,
+    "type:",
+    IND_WS,
+    types,
+    optional(ANY_WS, "is:", IND_WS, base),
+    optional(IND_WS, "with:", IND_WS, many(
+        optional(
+            either(
+                spaces,
+                all(newline, getIndent) // this is automatically the last IND from IND_WS
+            )
+        ),
+        token("membertype", /\w+/),
+        /\s*\:\s*/,
+        membernames
+    )),
+    optional(IND_WS, "start:", IND_WS, startstate)
+).yields(prettyprint);
+
 let typedefs:any = rule(many(typedef, optional(ANY_WS)));
 
-let source:string = `type:
-    Party
-is:
-    Address
-
+let source:string = `
 type:
-    Buyer, Seller, BuyerRep, SellerRep
+    Document
 is:
     machine with:
-        Party: this
-        bool: sentCloseRequest
+        Hash: this
+        Signature: buyer, seller, buyerRep, sellerRep
+        Party: rejecter
+    start:
+        initialise
 `;
 
 parse(source)
 (
     rule(typedefs).yields(prettyprint),
-    rule("operator:", INF_WS, /\w+/, /\w+/)
+    rule("operator:", IND_WS, /\w+/, /\w+/)
 );
 
