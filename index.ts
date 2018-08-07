@@ -1,11 +1,30 @@
 class ResultTokens {
-    tokens:any[];
+    tokens:{name:string, result:Result}[];
     constructor() {
         this.tokens = [];
     }
     push(name:string, result:Result):number {
         this.tokens.push({name, result});
         return this.tokens.length;
+    }
+    dropafter(end:number): void {
+        while (this.tokens.length > 0) {
+            let temp:any = this.tokens.pop();
+            if (temp.result.endloc > end) {
+                continue;
+            } else {
+                this.tokens.push(temp);
+                break;
+            }
+        }
+    }
+    one(name:string):string | any {
+        const target:{name:string, result:Result}[] = this.tokens.filter(t => t.name === name);
+        if (target.length > 0) {
+            return target[0].result.value;
+        } else {
+            return null;
+        }
     }
 }
 class Result {
@@ -47,6 +66,7 @@ class Input {
     location:number;
     state:any;
     tokens:ResultTokens = new ResultTokens();
+    tokenyielders:any[] = [];
     constructor(source:string) {
         this.source = source;
         this.location = 0;
@@ -65,10 +85,15 @@ class Input {
     }
     begin(tokens:ResultTokens):number {
         this.tokens = tokens;
+        this.tokenyielders = [];
         return this.location;
+    }
+    end():void {
+        // do nothing
     }
     rewind(loc:number):void {
         this.location = loc;
+        this.tokens.dropafter(loc);
     }
     consume(predicate:Function | any):Result {
         const startloc:number = this.location;
@@ -100,6 +125,10 @@ const parse:Function = (source:string) => (...rules:any[]):any => {
 };
 
 const parserule:Function = (input:Input, rule:any):any => {
+    if (rule.breakonentry) {
+        // tslint:disable-next-line:no-debugger
+        debugger;
+    }
     let tokens:ResultTokens = new ResultTokens();
     let ref:number = input.begin(tokens);
     let x:any;
@@ -116,6 +145,7 @@ const parserule:Function = (input:Input, rule:any):any => {
         return false;
     }
     // console.log(JSON.stringify(matches, null, 2));
+    input.end();
     if (rule.yielder) {
         rule.yielder(tokens);
     }
@@ -142,6 +172,12 @@ const rule:Function = (...patterns:any[]):any => {
     return predicates;
 };
 
+const debugrule:Function = (...patterns:any[]):any => {
+    let thisrule:any = rule(...patterns);
+    thisrule.breakonentry = true;
+    return thisrule;
+};
+
 const all:Function = (...patterns:any[]):(input:Input) => Result => {
     return (input:Input):Result => {
         let location:number = input.location;
@@ -153,6 +189,7 @@ const all:Function = (...patterns:any[]):(input:Input) => Result => {
                 consumed.push(nxt);
             } else {
                 input.rewind(location);
+                // input.unconsume(...consumed);
                 fault = true;
                 break;
             }
@@ -179,7 +216,7 @@ const optional:Function = (...patterns:any[]):(input:Input) => Result => {
 const either:Function = (...patterns:any[]):(input:Input) => Result => {
     return (input:Input):Result => {
         let outcome:Result = Result.fault(input);
-        for (let pattern of ensurePredicates(patterns)) {
+        for (let pattern of ensurePredicates(...patterns)) {
             let current:Result = input.consume(pattern);
             if (current.success) {
                 outcome = current;
@@ -209,15 +246,19 @@ const many:Function = (...patterns:any[]):(input:Input) => Result => {
                 break;
             }
         }
+        if (consumed.length === 0) {
+            consumed = [Result.pass(input)];
+        }
         return Result.composite(...consumed);
     };
 };
 
 const ensurePredicates:Function = (...patterns:any[]):Function[] => {
     return patterns.map(pattern => {
+        let predicate:any = null;
         switch(pattern.__proto__.constructor.name) {
             case "String":
-            return (input:Input):Result => {
+            predicate = (input:Input):Result => {
                 const ix:number = input.indexOf(pattern);
                 const success:boolean = ix === 0;
                 const startloc:number = input.location;
@@ -230,8 +271,12 @@ const ensurePredicates:Function = (...patterns:any[]):Function[] => {
                     children: []
                 };
             };
+            predicate.toString = () => {
+                return "string:" + pattern;
+            };
+            return predicate;
             case "RegExp":
-            return (input:Input):Result => {
+            predicate = (input:Input):Result => {
                 const rxix:any = input.indexOf(pattern);
                 const success:boolean = rxix.index === 0;
                 const startloc:number = input.location;
@@ -244,11 +289,19 @@ const ensurePredicates:Function = (...patterns:any[]):Function[] => {
                     children: []
                 };
             };
+            predicate.toString = () => {
+                return "regex:" + pattern.toString();
+            };
+            return predicate;
             case "Function":
             return pattern;
             // subrule case, trampoline time!
             case "Array":
             return (input:Input):Result => {
+                if (pattern.breakonentry) {
+                    // tslint:disable-next-line:no-debugger
+                    debugger;
+                }
                 if (pattern.yielder) {
                     const frozentokens:ResultTokens = input.tokens;
                     input.tokens = new ResultTokens();
@@ -315,7 +368,7 @@ let membername:any = token("membername", /\w+/);
 let membernames:any = rule(membername, many(optional(infix_comma, membername)));
 
 let startstate:any = token("startstate", /\w+/);
-let statename:any = token("statename", /w+/);
+let statename:any = token("statename", /\w+/);
 
 let arg:any = rule(token("arg", lit_or_name));
 let args:any = rule(arg, many(infix_comma, arg));
@@ -324,17 +377,50 @@ let type_arg:any = rule(token("arg_t", lit_or_name), ":", token("arg_n", lit_or_
 let type_args:any = rule(type_arg, many(infix_comma, type_arg));
 
 let op:any = rule(spaces, token("op", /\=|\+\=|\-\=|and|or|not|xor/), spaces);
-let expr_assign:any = rule(token("lhs", /w+/), op, token("rhs", /w+/));
-let expr_call:any = rule(token("method", /w+/), "(", either(type_args, args), ")", ":");
-let expr_op:any = rule(op, token("rhs", /w+/));
+let expr_assign:any = rule(token("lhs", /\w+/), op, token("rhs", /\w+/))
+    .yields((y:any) => {
+        return {
+            op: "binaryoperator",
+            parameters: [
+                y.one("op"),
+                y.one("lhs"),
+                y.one("rhs")
+            ]
+        };
+    });
+let expr_call:any = rule(token("method", /\w+/), "(", either(type_args, args), ")", ":")
+    .yields((y:any) => {
+        return {
+            op: "methodcall",
+            parameters: [
+                y.one("method")
+            ]
+        };
+    });
+let expr_op:any = rule(op, token("rhs", /\w+/))
+    .yields((y:any) => {
+        return {
+            op: "prefixoperator",
+            parameters: [
+                y.one("op"),
+                y.one("rhs")
+            ]
+        };
+    });
 
 let stmt_expression:any = rule(either(expr_assign, expr_call, expr_op));
-let stmt_case:any = rule(IND_WS, "case", spaces, stmt_expression, ":", /*statements*/);
-let stmts_case:any = rule(many(stmt_case));
+let stmt_case:any = rule(IND_WS, token("case", /case/), spaces, stmt_expression, ":", /*statements*/)
+    .yields((y:any) => {
+        console.log(y);
+    });
+let stmts_case:any = rule(many(stmt_case))
+    .yields((y:any) => {
+        console.log(y);
+    });
 let stmt_switch:any = rule("switch", spaces, token("switchinput", lit_or_name), ":", stmts_case);
 let statements:any = rule(either(stmt_switch));
 // this is probably not a "nice" way to do this
-stmt_case.append(statements);
+// stmt_case.append(statements);
 
 let typedef:any = rule(
     ANY_WS,
@@ -345,8 +431,8 @@ let typedef:any = rule(
     optional(IND_WS, "with:", IND_WS, many(
         optional(
             either(
-                spaces,
-                all(newline, getIndent) // this is automatically the last IND from IND_WS
+                all(spaces, newline, getIndent), // this is automatically the last IND from IND_WS
+                spaces
             )
         ),
         token("membertype", /\w+/),
@@ -355,7 +441,7 @@ let typedef:any = rule(
     )),
     optional(IND_WS, "start:", IND_WS, startstate),
     optional(IND_WS, "state", spaces, statename, ":", IND_WS, many(
-        optional(getIndent),
+        optional(newline, getIndent),
         statements,
     ))
 ).yields(prettyprint);
@@ -372,6 +458,11 @@ is:
         Party: rejecter
     start:
         initialise
+    state initialise:
+        switch input:
+            case sign(Buyer:x):
+                halt
+
 `;
 
 parse(source)
