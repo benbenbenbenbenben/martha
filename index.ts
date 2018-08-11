@@ -106,10 +106,10 @@ class Util {
     // static wswrap           = (...items:(IRule|string|RegExp|IToken)[]) => rule();
 }
 class Exp {
-    static atom                 = rule(either(Val.anyliteral,                       // literal
-                                            all(Ref.member, "(", () => Exp.exp, ")"),     // call
-                                            all("(", () => Exp.exp, ")"),                 // parenthesised
-                                            Ref.member));                           // member/var
+    static atom                 = rule(either(Val.anyliteral,                               // literal
+                                            all(Ref.member, "(", () => Exp.exp, ")"),       // call
+                                            all("(", () => Exp.exp, ")"),                   // parenthesised
+                                            Ref.member));                                   // member/var
     static exp                  = rule(Exp.atom, many(/ */, Op.anybinary, / */, Exp.atom));
 }
 
