@@ -158,8 +158,7 @@ var Ditto = /** @class */ (function () {
                             return result;
                         }
                         else {
-                            var x = Ditto.all.apply(Ditto, pattern)(input);
-                            return x;
+                            return Ditto.all.apply(Ditto, pattern)(input);
                         }
                     };
                 default:

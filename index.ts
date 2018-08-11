@@ -24,7 +24,7 @@ class Op {
 }
 class Val {
     static bool         = token("bool", /true|false/);
-    static integer      = token("integer", /[\d+]/);
+    static integer      = token("integer", /[\d]+/);
     static str          = token("string", /\"[^\"]+|\'[^\']+/);
 
     static get anyliteral():any {
@@ -50,6 +50,8 @@ class Kwrd {
     static ctor         = token("ctor", /constructor/);
 
     static type         = "type";
+    static is           = "is";
+    static with         = "with";
 }
 class Ref {
     // members and variables
@@ -96,22 +98,23 @@ class Util {
         Util.indents.pop();
         return Result.pass(input);
     });
-    static block            = (begin:IRule|string|RegExp, repeat:IRule|string|RegExp) => rule(
+    static block            = (begin:IRule|string|RegExp|IToken, repeat:IRule|string|RegExp|IToken) => rule(
         begin, ":",
         Util.pushIndent,
         many(repeat, either(Util.peekIndent, Util.popIndent))
     )
+    static wswrap           = (...items:(IRule|string|RegExp|IToken)[]) => rule(...items.map(i => all(Ws.ANY_WS, i)), Ws.ANY_WS);
 }
 class Exp {
     static atom         = rule(either(Ref.member, Val.anyliteral));
-    static expr_assign  = rule(Exp.atom, Op.anybinary, Exp.atom)
+    static expr_assign  = rule(Exp.atom, /\s*/, Op.anybinary, /\s*/, Exp.atom)
     .yields((y:any) => {
         return {
             op: "binaryoperator",
             parameters: [
-                y.one("op"),
-                y.one("lhs"),
-                y.one("rhs")
+                y.tokens[1].name,
+                y.tokens[0].result.value,
+                y.tokens[2].result.value
             ]
         };
     });
@@ -140,82 +143,6 @@ class Exp {
     });
 }
 
-class Def {
-    static specpredicate = rule(
-        Op.dot, Ref.member, Op.anybinary, either(Val.anyliteral, Ref.member),
-        Op.dot, Ref.member,
-        Op.anybinary, either(Val.anyliteral, Ref.member)
-        // op value (and op value etc...)
-        // .member op value...
-        // predicate function name (where predicate function takes form: bool f(type))
-    );
-    static argumentspec = rule("{", Def.specpredicate, "}");
-    static argumentdef = rule(Ref.varname, ":", Ref.typename, optional(Def.argumentspec));
-    static returntype = rule(Ref.typename, optional(Def.argumentspec));
-    static argumentdefs = rule(Def.argumentdef, many(Op.infix_comma, Def.argumentdef));
-    static methoddef = rule(
-        optional(many(Kwrd.anyaccess, Ws.space1ton)),
-        optional(Kwrd.static, Ws.space1ton),
-        optional(Kwrd.async, Ws.space1ton),
-        optional(Kwrd.atomic, Ws.space1ton),
-        either(
-            all(Def.returntype, Ws.space1ton, token("name", /w+/)),
-            Kwrd.ctor
-        ),
-        optional("(",
-            optional(Def.argumentdefs),
-        ")"),
-        ":",
-        // indented_statements
-    ).yields((r, c) => {
-        console.log(r,c);
-    });
-    static membernames = rule(Ref.member, many(optional(Op.infix_comma, Ref.member)));
-}
-
-class Mod {
-    static typedec = rule(Ref.typename, many(optional(Op.infix_comma, Ref.typename)))
-        .yields(r => { return {
-             typenames: r.get("typename") }; });
-    static typedef_member:any = rule(optional(
-            either(
-                all(Ws.space0ton, Ws.newline, Ws.getIndent), // this is automatically the last IND from IND_WS
-                Ws.space0ton
-            )), Ref.typename, Op.infix_colon, Def.membernames).yields((raw:any) => {
-                return { members: raw.get("member").map((name:string) => { return { name, type: raw.one("typename") }; }) };
-            });
-    static typedef_members = rule(many(Mod.typedef_member)).yields((_:any, cst:any) => {
-            // the flattening!
-            return { members: [].concat(...([].concat(...([].concat(...cst))).map((x:any) => x.members))) };
-        });
-    static typedef = rule(
-        Util.block(Kwrd.type, Mod.typedec),
-        optional(Ws.ANY_WS, "is:", Ws.IND_WS,
-            Ref.basetypename),
-        optional(Ws.ANY_WS, "with:", Ws.IND_WS,
-            Mod.typedef_members),
-        optional(Ws.ANY_WS,
-            many(Def.methoddef)),
-    ).yields((raw:any, cst:any) => {
-        let types:any = cst[0][0][0][0].typenames.map((name:string) => {
-            let type:any = {
-                name
-            };
-            if (raw.one("basetypename")) {
-                type.basetype = raw.one("basetypename");
-            }
-            if (cst[1] && cst[1][0]) {
-                type.members = cst[1][0].members;
-            }
-            return type;
-        });
-        return {
-            types
-        };
-    });
-    static typedefs = rule(many(Mod.typedef, optional(Ws.ANY_WS)));
-}
-
 class Stmt {
     static stmt_expression = rule(either(Exp.expr_assign, Exp.expr_call, Exp.expr_op))
         .yields((_:any, expr:any) => {
@@ -239,7 +166,7 @@ class Stmt {
             ]
         };
     });
-    static stmt_switch = rule("switch", Ws.space0ton, Exp.atom.yields(x => x.raw("atom")), ":", Stmt.stmts_case)
+    static stmt_switch = rule("switch", Ws.space0ton, Exp.atom, ":", Stmt.stmts_case)
         .yields((y, h) => {
             return {
                 op: "switch",
@@ -258,6 +185,81 @@ class Stmt {
         // z Stmt.stmt_atomic
     ));
 }
+
+class Def {
+    static specpredicate = rule(
+        Op.dot, Ref.member, Op.anybinary, either(Val.anyliteral, Ref.member),
+        Op.dot, Ref.member,
+        Op.anybinary, either(Val.anyliteral, Ref.member)
+        // op value (and op value etc...)
+        // .member op value...
+        // predicate function name (where predicate function takes form: bool f(type))
+    );
+    static argumentspec = rule("{", Def.specpredicate, "}");
+    static argumentdef = rule(Ref.varname, ":", Ref.typename, optional(Def.argumentspec));
+    static returntype = rule(Ref.typename, optional(Def.argumentspec));
+    static argumentdefs = rule(Def.argumentdef, many(Op.infix_comma, Def.argumentdef));
+    static methoddef = rule(
+        Util.block(all(
+            optional(many(Kwrd.anyaccess, Ws.space1ton)),
+            optional(Kwrd.static, Ws.space1ton),
+            optional(Kwrd.async, Ws.space1ton),
+            optional(Kwrd.atomic, Ws.space1ton),
+            either(
+                all(Def.returntype, Ws.space1ton, token("name", /w+/)),
+                Kwrd.ctor
+            ),
+            optional("(",
+                optional(Def.argumentdefs),
+            ")"),
+        ), Stmt.statement)
+    ).yields((r, c) => {
+        console.log(r,c);
+    });
+    static membernames = rule(Ref.member, many(optional(Op.infix_comma, Ref.member)));
+}
+
+class Mod {
+    static typedec = rule(Ref.typename, many(optional(Op.infix_comma, Ref.typename)))
+        .yields(r => { return {
+             typenames: r.get("typename") }; });
+    static typedef_member:any = rule(optional(
+            either(
+                all(Ws.space0ton, Ws.newline, Ws.getIndent), // this is automatically the last IND from IND_WS
+                Ws.space0ton
+            )), Ref.typename, Op.infix_colon, Def.membernames).yields((raw:any) => {
+                return { members: raw.get("member").map((name:string) => { return { name, type: raw.one("typename") }; }) };
+            });
+    static typedef_members = rule(many(Mod.typedef_member)).yields((_:any, cst:any) => {
+            // the flattening!
+            return { members: [].concat(...([].concat(...([].concat(...cst))).map((x:any) => x.members))) };
+        });
+    static typedef = rule(
+        Util.block(Kwrd.type, Mod.typedec),
+        optional(Util.block(Kwrd.is, Ref.basetypename)),
+        optional(Util.block(Kwrd.with, Mod.typedef_members)),
+        many(Def.methoddef)
+    ).yields((raw:any, cst:any) => {
+        let types:any = cst[0][0][0][0].typenames.map((name:string) => {
+            let type:any = {
+                name
+            };
+            if (raw.one("basetypename")) {
+                type.basetype = raw.one("basetypename");
+            }
+            if (cst[1] && cst[1][0]) {
+                type.members = cst[1][0][0][0][0].members;
+            }
+            return type;
+        });
+        return {
+            types
+        };
+    });
+    static typedefs = rule(many(Mod.typedef, optional(Ws.ANY_WS)));
+}
+
+
 
 
 

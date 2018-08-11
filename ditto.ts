@@ -128,8 +128,7 @@ class Ditto {
                         input.tokens = frozentokens;
                         return result;
                     } else {
-                        const x:any = Ditto.all(...pattern)(input);
-                        return x;
+                        return Ditto.all(...pattern)(input);
                     }
                 };
                 default:
