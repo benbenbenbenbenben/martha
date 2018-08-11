@@ -1,383 +1,110 @@
-class ResultTokens {
-    tokens:{name:string, result:Result}[];
-    constructor() {
-        this.tokens = [];
+import { Ditto, Result, ResultTokens, Input, IRule, IToken } from "./ditto";
+const { parse, token, rule, all, many, optional, either } = Ditto;
+
+const prettyprint:any = (x:any) => console.log(JSON.stringify(x, null, 2));
+
+// const op
+// let op:any = rule(spaces, token("op", /\=|\+\=|\-\=|and|or|not|xor/), spaces);
+class Op {
+    // binary infix
+    static assign   = token("assign", "=");
+    static pluseq   = token("pluseq", "+=");
+    static lt       = token("lt", "<");
+    static lte      = token("lte", "<=");
+    static gt       = token("gt", ">");
+    static gte      = token("gte", ">=");
+    static dot      = token("dot", ".");
+
+    static get anybinary():any {
+        return either(this.assign, this.pluseq, this.lt, this.lte, this.gt, this.gte, this.dot);
     }
-    push(name:string, result:Result):number {
-        this.tokens.push({name, result});
-        return this.tokens.length;
-    }
-    dropafter(end:number): void {
-        while (this.tokens.length > 0) {
-            let temp:any = this.tokens.pop();
-            if (temp.result.endloc > end) {
-                continue;
-            } else {
-                this.tokens.push(temp);
-                break;
-            }
-        }
-    }
-    one(name:string):string | any {
-        const target:{name:string, result:Result}[] = this.tokens.filter(t => t.name === name);
-        if (target.length > 0) {
-            return target[0].result.value;
-        } else {
-            return null;
-        }
+
+    static infix_comma  = rule(/\s*,\s*/);
+    static infix_colon  = rule(/\s*\:\s*/);
+}
+class Val {
+    static bool         = token("bool", /true|false/);
+    static integer      = token("integer", /[\d+]/);
+    static str          = token("string", /\"[^\"]+|\'[^\']+/);
+
+    static get anyliteral():any {
+        return either(this.bool, this.integer, this.str);
     }
 }
-class Result {
-    public success:boolean = false;
-    public startloc:number = 0;
-    public endloc:number = 0;
-    public value:string = "";
-    public children:Result[] = [];
-    public static fault(input:Input):Result {
-        return {
-            success: false,
-            startloc: input.location,
-            endloc: input.location,
-            value: "",
-            children: []
-        };
+class Kwrd {
+    // access
+    static public       = token("public", /public/);
+    static private      = token("private", /private/);
+    static internal     = token("internal", /internal/);
+    static protected    = token("protected", /protected/);
+
+    static get anyaccess():any {
+        return either(this.public, this.private, this.internal, this.protected);
     }
-    public static pass(input:Input):Result {
-        return {
-            success: true,
-            startloc: input.location,
-            endloc: input.location,
-            value: "",
-            children: []
-        };
-    }
-    public static composite(...results:Result[]):Result {
-        let result:Result = new Result();
-        result.success = results.map(r => r.success).reduce((p, c) => p && c);
-        result.children = results;
-        result.startloc = results[0].startloc;
-        result.endloc = results[results.length - 1].endloc;
-        return result;
-    }
+
+    static async        = token("async", /async/);
+    static atomic       = token("atomic", /atomic/);
+
+    static static       = token("static", /static/);
+
+    static ctor         = token("ctor", /constructor/);
+
+    static type         = "type";
 }
-
-class Input {
-    source:string;
-    location:number;
-    state:any;
-    tokens:ResultTokens = new ResultTokens();
-    tokenyielders:any[] = [];
-    constructor(source:string) {
-        this.source = source;
-        this.location = 0;
-        this.state = 0;
-    }
-    indexOf(pattern:string | RegExp):number|any {
-        if (typeof(pattern) === "string") {
-            return this.source.substr(this.location).indexOf(pattern);
-        } else {
-            const r:any = pattern.exec(this.source.substr(this.location));
-            if (r === null) {
-                return { index: -1 };
-            }
-            return { value: r[0], index:r.index, length:r[0].length };
-        }
-    }
-    begin(tokens:ResultTokens):number {
-        this.tokens = tokens;
-        this.tokenyielders = [];
-        return this.location;
-    }
-    end():void {
-        // do nothing
-    }
-    rewind(loc:number):void {
-        this.location = loc;
-        this.tokens.dropafter(loc);
-    }
-    consume(predicate:Function | any):Result {
-        const startloc:number = this.location;
-        const result:Result = predicate(this);
-        let output:Result =  Result.fault(this);
-        if (result.success === false) {
-            this.location = startloc;
-        } else {
-            this.location = result.endloc;
-            if (predicate.__token__) {
-                this.yieldtoken(predicate.__token__, result);
-            }
-            output = result;
-        }
-        return output;
-    }
-    yieldtoken(name:string, result:Result):void {
-        this.tokens.push(name, result);
-    }
+class Ref {
+    // members and variables
+    static _member      = token("member", /[a-z_\$\@][a-z0-9\$\@]*/i);
+    static varname      = token("varname", /[a-z_\$\@][a-z0-9\$\@]*/i);
+    static member       = rule(Ref._member, many(Op.dot, Ref._member));
+    static typename     = token("typename", /[a-z_\$\@][a-z0-9\$\@]*/i);
+    static basetypename = token("basetypename", /[a-z_\$\@][\.a-z0-9\$\@]*/i);
 }
-const parse:Function = (source:string) => (...rules:any[]):any => {
-    // each rule is a predicate[]
-    let input:Input = new Input(source);
-    for (let rule of rules) {
-        if (parserule(input, rule) === false) {
-            break;
-        }
-    }
-};
+class Ws {
+    static space0ton    = /[ \t]*/;
+    static space1ton    = /[ \t]+/;
+    static newline      = /\r\n|\r|\n|\n\r/;
+    static indent       = token("indent", /^[ \t]+/);
 
-const parserule:Function = (input:Input, rule:any):any => {
-    if (rule.breakonentry) {
-        // tslint:disable-next-line:no-debugger
-        debugger;
-    }
-    let tokens:ResultTokens = new ResultTokens();
-    let ref:number = input.begin(tokens);
-    let x:any;
-    let matches:Result[] = [];
-    for (let predicate of rule) {
-        x = input.consume(predicate);
-        matches.push(x);
-        if (x.success === false) {
-            break;
-        }
-    }
-    if (x.success === false) {
-        input.rewind(ref);
-        return false;
-    }
-    // console.log(JSON.stringify(matches, null, 2));
-    input.end();
-    if (rule.yielder) {
-        rule.yielder(tokens);
-    }
-    return true;
-    // rule(...matches);
-};
-
-const rule:Function = (...patterns:any[]):any => {
-    let predicates:any = ensurePredicates(...patterns);
-    predicates.__rule__ = true;
-    predicates.yields = (handler:Function):any => {
-        predicates.yielder = handler;
-        return predicates;
-    };
-    // this is not ideal
-    predicates.append = (...patterns:any[]):any => {
-        let newpredicates:any = ensurePredicates(...patterns);
-        for (var newpredicate of newpredicates) {
-            predicates.push(newpredicate);
-        }
-        return predicates;
-    };
-    //
-    return predicates;
-};
-
-const debugrule:Function = (...patterns:any[]):any => {
-    let thisrule:any = rule(...patterns);
-    thisrule.breakonentry = true;
-    return thisrule;
-};
-
-const all:Function = (...patterns:any[]):(input:Input) => Result => {
-    return (input:Input):Result => {
-        let location:number = input.location;
-        let consumed:Result[] = [];
-        let fault:boolean = false;
-        for (let pattern of ensurePredicates(...patterns)) {
-            const nxt:Result = input.consume(pattern);
-            if (nxt.success) {
-                consumed.push(nxt);
-            } else {
-                input.rewind(location);
-                // input.unconsume(...consumed);
-                fault = true;
-                break;
-            }
-        }
-        if (fault) {
-            return Result.fault(input);
-        } else {
-            return Result.composite(...consumed);
-        }
-    };
-};
-
-const optional:Function = (...patterns:any[]):(input:Input) => Result => {
-    return (input:Input):Result => {
-        let outcome:Result = all(...patterns)(input);
-        if (outcome.success) {
-            return outcome;
-        } else {
+    static IND:any      = rule(Ws.newline, Ws.indent).yields(function(this:any, result:ResultTokens):void {
+                                this._indent = result.tokens[0].result.value;
+                            });
+    static getIndent    = (input:Input):Result => {
+                            let index:number = input.source.substring(input.location).indexOf(Ws.IND._indent);
+                            if (index === 0) {
+                                input.location += Ws.IND._indent.length;
+                                return Result.pass(input);
+                            }
+                            return Result.fault(input);
+                        }
+    static IND_WS       = rule(Ws.space0ton, optional(Ws.IND));
+    static ANY_WS       = rule(/[\t\r\n\s]*/);
+}
+class Util {
+    static indents:string[] = [];
+    static pushIndent       = rule(Ws.space0ton, Ws.newline, Ws.indent).yields(r => {
+        Util.indents.push(r.tokens[0].result.value);
+    });
+    static peekIndent       = rule(Ws.newline, (input:Input):Result => {
+        let index:number = input.source.substring(input.location).indexOf(Util.indents[Util.indents.length - 1]);
+        if (index === 0) {
+            input.location += Util.indents[Util.indents.length - 1].length;
             return Result.pass(input);
         }
-    };
-};
-
-const either:Function = (...patterns:any[]):(input:Input) => Result => {
-    return (input:Input):Result => {
-        let outcome:Result = Result.fault(input);
-        for (let pattern of ensurePredicates(...patterns)) {
-            let current:Result = input.consume(pattern);
-            if (current.success) {
-                outcome = current;
-                break;
-            }
-        }
-        return outcome;
-    };
-};
-
-const many:Function = (...patterns:any[]):(input:Input) => Result => {
-    return (input:Input):Result => {
-        let location:number;
-        let consumed:Result[] = [];
-        let current:Result;
-        let nothingleft:boolean = false;
-        while (true) {
-            location = input.location;
-            current = all(...patterns)(input);
-            if (current.success) {
-                consumed.push(current);
-            } else {
-                nothingleft = true;
-            }
-            // stalled
-            if (input.location === location || nothingleft) {
-                break;
-            }
-        }
-        if (consumed.length === 0) {
-            consumed = [Result.pass(input)];
-        }
-        return Result.composite(...consumed);
-    };
-};
-
-const ensurePredicates:Function = (...patterns:any[]):Function[] => {
-    return patterns.map(pattern => {
-        let predicate:any = null;
-        switch(pattern.__proto__.constructor.name) {
-            case "String":
-            predicate = (input:Input):Result => {
-                const ix:number = input.indexOf(pattern);
-                const success:boolean = ix === 0;
-                const startloc:number = input.location;
-                const endloc:number = input.location + pattern.length;
-                return {
-                    success,
-                    startloc,
-                    endloc,
-                    value: pattern,
-                    children: []
-                };
-            };
-            predicate.toString = () => {
-                return "string:" + pattern;
-            };
-            return predicate;
-            case "RegExp":
-            predicate = (input:Input):Result => {
-                const rxix:any = input.indexOf(pattern);
-                const success:boolean = rxix.index === 0;
-                const startloc:number = input.location;
-                const endloc:number = input.location + rxix.length;
-                return {
-                    success,
-                    startloc,
-                    endloc,
-                    value: rxix.value,
-                    children: []
-                };
-            };
-            predicate.toString = () => {
-                return "regex:" + pattern.toString();
-            };
-            return predicate;
-            case "Function":
-            return pattern;
-            // subrule case, trampoline time!
-            case "Array":
-            return (input:Input):Result => {
-                if (pattern.breakonentry) {
-                    // tslint:disable-next-line:no-debugger
-                    debugger;
-                }
-                if (pattern.yielder) {
-                    const frozentokens:ResultTokens = input.tokens;
-                    input.tokens = new ResultTokens();
-                    const result:any = all(...pattern)(input);
-                    if (result.success) {
-                        pattern.yielder(input.tokens);
-                    }
-                    input.tokens = frozentokens;
-                    return result;
-                } else {
-                    return all(...pattern)(input);
-                }
-            };
-            default:
-            throw new Error("oops");
-        }
+        return Result.fault(input);
     });
-};
-
-let _:any = null;
-
-let maketype:Function = (s:string) => {
-    console.log(s);
-};
-
-const token:Function = (name:string, pattern:any):any => {
-    pattern = ensurePredicates(pattern);
-    pattern[0].__token__ = name;
-    return pattern[0];
-};
-
-let prettyprint:any = (x:any) => console.log(JSON.stringify(x, null, 2));
-
-
-const spaces:RegExp = /[ \t]*/;
-const newline:RegExp = /\r\n|\r|\n/;
-const indent:any = token("indent", /^[ \t]+/);
-
-let _INDENT:string = "";
-
-let IND:any = rule(newline, indent).yields((x:any) => {
-    _INDENT = x.tokens[0].result.value;
-});
-let getIndent:any = (input:Input):Result => {
-    let index:number = input.source.substring(input.location).indexOf(_INDENT);
-    if (index === 0) {
-        input.location += _INDENT.length;
+    static popIndent        = rule(Ws.newline, (input:Input):Result => {
+        Util.indents.pop();
         return Result.pass(input);
-    }
-    return Result.fault(input);
-};
-
-let lit_or_name:RegExp = /[a-z0-9][a-z0-9_\.]*/i;
-
-let IND_WS:any = rule(spaces, optional(IND));
-let ANY_WS:any = rule(/[\t\r\n\s]*/);
-let infix_comma:any = rule(/\s*,\s*/);
-
-let type:any = token("typename", /\w+/);
-let types:any = rule(type, many(optional(infix_comma, type)));
-let base:any = token("basetypename", /\w+/);
-
-let membername:any = token("membername", /\w+/);
-let membernames:any = rule(membername, many(optional(infix_comma, membername)));
-
-let startstate:any = token("startstate", /\w+/);
-let statename:any = token("statename", /\w+/);
-
-let arg:any = rule(token("arg", lit_or_name));
-let args:any = rule(arg, many(infix_comma, arg));
-
-let type_arg:any = rule(token("arg_t", lit_or_name), ":", token("arg_n", lit_or_name));
-let type_args:any = rule(type_arg, many(infix_comma, type_arg));
-
-let op:any = rule(spaces, token("op", /\=|\+\=|\-\=|and|or|not|xor/), spaces);
-let expr_assign:any = rule(token("lhs", /\w+/), op, token("rhs", /\w+/))
+    });
+    static block            = (begin:IRule|string|RegExp, repeat:IRule|string|RegExp) => rule(
+        begin, ":",
+        Util.pushIndent,
+        many(repeat, either(Util.peekIndent, Util.popIndent))
+    )
+}
+class Exp {
+    static atom         = rule(either(Ref.member, Val.anyliteral));
+    static expr_assign  = rule(Exp.atom, Op.anybinary, Exp.atom)
     .yields((y:any) => {
         return {
             op: "binaryoperator",
@@ -388,16 +115,7 @@ let expr_assign:any = rule(token("lhs", /\w+/), op, token("rhs", /\w+/))
             ]
         };
     });
-let expr_call:any = rule(token("method", /\w+/), "(", either(type_args, args), ")", ":")
-    .yields((y:any) => {
-        return {
-            op: "methodcall",
-            parameters: [
-                y.one("method")
-            ]
-        };
-    });
-let expr_op:any = rule(op, token("rhs", /\w+/))
+    static expr_op      = rule(Op.anybinary, token("rhs", /\w+/))
     .yields((y:any) => {
         return {
             op: "prefixoperator",
@@ -407,67 +125,179 @@ let expr_op:any = rule(op, token("rhs", /\w+/))
             ]
         };
     });
+    static callargs     = rule(Exp.atom, many(Op.infix_comma, Exp.atom));
 
-let stmt_expression:any = rule(either(expr_assign, expr_call, expr_op));
-let stmt_case:any = rule(IND_WS, token("case", /case/), spaces, stmt_expression, ":", /*statements*/)
+    static type_arg     = rule(Ref.member, ":", Exp.atom);
+    static type_args    = rule(Exp.type_arg, many(Op.infix_comma, Exp.type_arg));
+    static expr_call    = rule(Ref.member, "(", either(Exp.type_args, Exp.callargs), ")", ":")
     .yields((y:any) => {
-        console.log(y);
+        return {
+            op: "methodcall",
+            parameters: [
+                y.one("method")
+            ]
+        };
     });
-let stmts_case:any = rule(many(stmt_case))
-    .yields((y:any) => {
-        console.log(y);
-    });
-let stmt_switch:any = rule("switch", spaces, token("switchinput", lit_or_name), ":", stmts_case);
-let statements:any = rule(either(stmt_switch));
-// this is probably not a "nice" way to do this
-// stmt_case.append(statements);
+}
 
-let typedef:any = rule(
-    ANY_WS,
-    "type:",
-    IND_WS,
-    types,
-    optional(ANY_WS, "is:", IND_WS, base),
-    optional(IND_WS, "with:", IND_WS, many(
-        optional(
-            either(
-                all(spaces, newline, getIndent), // this is automatically the last IND from IND_WS
-                spaces
-            )
+class Def {
+    static specpredicate = rule(
+        Op.dot, Ref.member, Op.anybinary, either(Val.anyliteral, Ref.member),
+        Op.dot, Ref.member,
+        Op.anybinary, either(Val.anyliteral, Ref.member)
+        // op value (and op value etc...)
+        // .member op value...
+        // predicate function name (where predicate function takes form: bool f(type))
+    );
+    static argumentspec = rule("{", Def.specpredicate, "}");
+    static argumentdef = rule(Ref.varname, ":", Ref.typename, optional(Def.argumentspec));
+    static returntype = rule(Ref.typename, optional(Def.argumentspec));
+    static argumentdefs = rule(Def.argumentdef, many(Op.infix_comma, Def.argumentdef));
+    static methoddef = rule(
+        optional(many(Kwrd.anyaccess, Ws.space1ton)),
+        optional(Kwrd.static, Ws.space1ton),
+        optional(Kwrd.async, Ws.space1ton),
+        optional(Kwrd.atomic, Ws.space1ton),
+        either(
+            all(Def.returntype, Ws.space1ton, token("name", /w+/)),
+            Kwrd.ctor
         ),
-        token("membertype", /\w+/),
-        /\s*\:\s*/,
-        membernames
-    )),
-    optional(IND_WS, "start:", IND_WS, startstate),
-    optional(IND_WS, "state", spaces, statename, ":", IND_WS, many(
-        optional(newline, getIndent),
-        statements,
-    ))
-).yields(prettyprint);
+        optional("(",
+            optional(Def.argumentdefs),
+        ")"),
+        ":",
+        // indented_statements
+    ).yields((r, c) => {
+        console.log(r,c);
+    });
+    static membernames = rule(Ref.member, many(optional(Op.infix_comma, Ref.member)));
+}
 
-let typedefs:any = rule(many(typedef, optional(ANY_WS)));
+class Mod {
+    static typedec = rule(Ref.typename, many(optional(Op.infix_comma, Ref.typename)))
+        .yields(r => { return {
+             typenames: r.get("typename") }; });
+    static typedef_member:any = rule(optional(
+            either(
+                all(Ws.space0ton, Ws.newline, Ws.getIndent), // this is automatically the last IND from IND_WS
+                Ws.space0ton
+            )), Ref.typename, Op.infix_colon, Def.membernames).yields((raw:any) => {
+                return { members: raw.get("member").map((name:string) => { return { name, type: raw.one("typename") }; }) };
+            });
+    static typedef_members = rule(many(Mod.typedef_member)).yields((_:any, cst:any) => {
+            // the flattening!
+            return { members: [].concat(...([].concat(...([].concat(...cst))).map((x:any) => x.members))) };
+        });
+    static typedef = rule(
+        Util.block(Kwrd.type, Mod.typedec),
+        optional(Ws.ANY_WS, "is:", Ws.IND_WS,
+            Ref.basetypename),
+        optional(Ws.ANY_WS, "with:", Ws.IND_WS,
+            Mod.typedef_members),
+        optional(Ws.ANY_WS,
+            many(Def.methoddef)),
+    ).yields((raw:any, cst:any) => {
+        let types:any = cst[0][0][0][0].typenames.map((name:string) => {
+            let type:any = {
+                name
+            };
+            if (raw.one("basetypename")) {
+                type.basetype = raw.one("basetypename");
+            }
+            if (cst[1] && cst[1][0]) {
+                type.members = cst[1][0].members;
+            }
+            return type;
+        });
+        return {
+            types
+        };
+    });
+    static typedefs = rule(many(Mod.typedef, optional(Ws.ANY_WS)));
+}
+
+class Stmt {
+    static stmt_expression = rule(either(Exp.expr_assign, Exp.expr_call, Exp.expr_op))
+        .yields((_:any, expr:any) => {
+            return expr[0];
+        });
+    static stmt_case = rule(Ws.IND_WS, token("case", /case/), Ws.space0ton, Stmt.stmt_expression, ":", /*statements*/)
+        .yields((y:any) => {
+            return {
+                op: "case",
+                parameters: [
+                    y.one("case")
+                ]
+            };
+        });
+    static stmts_case = rule(Stmt.stmt_case, many(Stmt.stmt_case))
+    .yields((y:any) => {
+        return {
+            op: "case",
+            parameters: [
+                y.one("case")
+            ]
+        };
+    });
+    static stmt_switch = rule("switch", Ws.space0ton, Exp.atom.yields(x => x.raw("atom")), ":", Stmt.stmts_case)
+        .yields((y, h) => {
+            return {
+                op: "switch",
+                parameters: [
+                    h.raw
+                ]
+            };
+        });
+    static statement        = rule(either(
+        Stmt.stmt_expression,
+        // z Stmt.stmt_switch,
+        // z Stmt.stmt_if,
+        // z Stmt.stmt_while,
+        // z Stmt.stmt_for,
+        // z Stmt.stmt_critical,
+        // z Stmt.stmt_atomic
+    ));
+}
+
+
+
+
+
 
 let source:string = `
 type:
-    Document
+    Party
 is:
-    machine with:
-        Hash: this
-        Signature: buyer, seller, buyerRep, sellerRep
-        Party: rejecter
-    start:
-        initialise
-    state initialise:
-        switch input:
-            case sign(Buyer:x):
-                halt
+    Address
 
+type:
+    Buyer, Seller, BuyerRep, SellerRep
+is:
+    SomeBaseType
+with:
+    Party: this
+    bool: sentCloseRequest
+constructor:
+    a = 10
+    b = 20
+    d, e = get2things
+    call(10)
+    call(a(b(c(10, 90))))
+atomic void record(items{.len > 0}:Array[], f{> 0}:Int, flag:bool, ref z:Vector<string>)
+    ledger.process(sum)
+    total += f
+atomic int{> 0} send(to:Address, amount:int{> 0})
+    do(bad(stuff[0].with("stuff".length)))
 `;
 
 parse(source)
 (
-    rule(typedefs).yields(prettyprint),
-    rule("operator:", IND_WS, /\w+/, /\w+/)
+    Ws.ANY_WS,
+    rule(Mod.typedefs).yields((_:any, cst:any) => {
+        // tslint:disable-next-line:no-debugger
+        // debugger;
+        prettyprint(cst);
+    }),
+    rule("operator:", Ws.IND_WS, /\w+/, /\w+/)
 );
 

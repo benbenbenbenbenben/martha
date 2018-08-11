@@ -6,40 +6,40 @@ is:
 type:
 	Buyer, Seller, BuyerRep, SellerRep
 is: 
-	machine with:
-		Party: this
-		bool: sentCloseRequest
+	machine 
+with:
+	Party: this
+	bool: sentCloseRequest
 	
-type:
+machine:
 	Document
-is:
-	machine with:
-		Hash: this
-		Signature: buyer, seller, buyerRep, sellerRep
-		Party: rejecter
-	start:
-		initialise
-	state initialise:
-		switch input:
-			case sign(Buyer:x):
-				if buyer: throw "buyer already signed"
-				halt
-			case sign(Seller:x):
-				if seller: throw "seller already signed"
-				halt
-			case sign(BuyerRep:x):
-				if buyerRep: throw "buyerRep already signed"
-				halt
-			case sign(SellerRep:x):
-				if sellerRep: throw "sellerRep already signed"
-				halt
-			case reject(Party:x):
-				rejecter = x
-				goto rejected
-		if buyer and seller and buyerRep and sellerRep: goto sealed
-	state sealed:
-	state rejected:
-	
+with:
+	Hash: this
+	Signature: buyer, seller, buyerRep, sellerRep
+	Party: rejecter
+start:
+	initialise
+state initialise:
+	switch input:
+		case sign(Buyer:x):
+			if buyer: throw "buyer already signed"
+			halt
+		case sign(Seller:x):
+			if seller: throw "seller already signed"
+			halt
+		case sign(BuyerRep:x):
+			if buyerRep: throw "buyerRep already signed"
+			halt
+		case sign(SellerRep:x):
+			if sellerRep: throw "sellerRep already signed"
+			halt
+		case reject(Party:x):
+			rejecter = x
+			goto rejected
+	if buyer and seller and buyerRep and sellerRep: goto sealed
+state sealed:
+state rejected:
+
 operator:
 	no
 when:
@@ -48,7 +48,7 @@ is:
 	not any x	
 
 machine:
-	conveyancing contract
+	conveyancing_contract
 with: 
 	Buyer: buyer
 	Seller: seller

@@ -13,6 +13,6 @@
             "sourceMaps": true,
             "cwd": "${workspaceRoot}",
             "protocol": "inspector",
-        }
+        },
     ]
 }
