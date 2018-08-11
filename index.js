@@ -119,87 +119,24 @@ var Util = /** @class */ (function () {
         return ditto_1.Result.pass(input);
     });
     Util.block = function (begin, repeat) { return rule(begin, ":", Util.pushIndent, many(repeat, either(Util.peekIndent, Util.popIndent))); };
-    Util.wswrap = function () {
-        var items = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            items[_i] = arguments[_i];
-        }
-        return rule.apply(void 0, items.map(function (i) { return all(Ws.ANY_WS, i); }).concat([Ws.ANY_WS]));
-    };
     return Util;
 }());
 var Exp = /** @class */ (function () {
     function Exp() {
     }
-    Exp.atom = rule(either(Ref.member, Val.anyliteral));
-    Exp.expr_assign = rule(Exp.atom, /\s*/, Op.anybinary, /\s*/, Exp.atom)
-        .yields(function (y) {
-        return {
-            op: "binaryoperator",
-            parameters: [
-                y.tokens[1].name,
-                y.tokens[0].result.value,
-                y.tokens[2].result.value
-            ]
-        };
-    });
-    Exp.expr_op = rule(Op.anybinary, token("rhs", /\w+/))
-        .yields(function (y) {
-        return {
-            op: "prefixoperator",
-            parameters: [
-                y.one("op"),
-                y.one("rhs")
-            ]
-        };
-    });
-    Exp.callargs = rule(Exp.atom, many(Op.infix_comma, Exp.atom));
-    Exp.type_arg = rule(Ref.member, ":", Exp.atom);
-    Exp.type_args = rule(Exp.type_arg, many(Op.infix_comma, Exp.type_arg));
-    Exp.expr_call = rule(Ref.member, "(", either(Exp.type_args, Exp.callargs), ")", ":")
-        .yields(function (y) {
-        return {
-            op: "methodcall",
-            parameters: [
-                y.one("method")
-            ]
-        };
-    });
+    Exp.atom = rule(either(Val.anyliteral, // literal
+    all(Ref.member, "(", function () { return Exp.exp; }, ")"), // call
+    all("(", function () { return Exp.exp; }, ")"), // parenthesised
+    Ref.member)); // member/var
+    Exp.exp = rule(Exp.atom, many(/ */, Op.anybinary, / */, Exp.atom));
     return Exp;
 }());
 var Stmt = /** @class */ (function () {
     function Stmt() {
     }
-    Stmt.stmt_expression = rule(either(Exp.expr_assign, Exp.expr_call, Exp.expr_op))
-        .yields(function (_, expr) {
-        return expr[0];
-    });
-    Stmt.stmt_case = rule(Ws.IND_WS, token("case", /case/), Ws.space0ton, Stmt.stmt_expression, ":")
-        .yields(function (y) {
-        return {
-            op: "case",
-            parameters: [
-                y.one("case")
-            ]
-        };
-    });
-    Stmt.stmts_case = rule(Stmt.stmt_case, many(Stmt.stmt_case))
-        .yields(function (y) {
-        return {
-            op: "case",
-            parameters: [
-                y.one("case")
-            ]
-        };
-    });
-    Stmt.stmt_switch = rule("switch", Ws.space0ton, Exp.atom, ":", Stmt.stmts_case)
-        .yields(function (y, h) {
-        return {
-            op: "switch",
-            parameters: [
-                h.raw
-            ]
-        };
+    Stmt.stmt_expression = rule(Exp.exp)
+        .yields(function (r) {
+        return r.tokens;
     });
     Stmt.statement = rule(either(Stmt.stmt_expression));
     return Stmt;
@@ -259,7 +196,7 @@ var Mod = /** @class */ (function () {
     Mod.typedefs = rule(many(Mod.typedef, optional(Ws.ANY_WS)));
     return Mod;
 }());
-var source = "\ntype:\n    Party\nis:\n    Address\n\ntype:\n    Buyer, Seller, BuyerRep, SellerRep\nis:\n    SomeBaseType\nwith:\n    Party: this\n    bool: sentCloseRequest\nconstructor:\n    a = 10\n    b = 20\n    d, e = get2things\n    call(10)\n    call(a(b(c(10, 90))))\natomic void record(items{.len > 0}:Array[], f{> 0}:Int, flag:bool, ref z:Vector<string>)\n    ledger.process(sum)\n    total += f\natomic int{> 0} send(to:Address, amount:int{> 0})\n    do(bad(stuff[0].with(\"stuff\".length)))\n";
+var source = "\ntype:\n    Party\nis:\n    Address\n\ntype:\n    Buyer, Seller, BuyerRep, SellerRep\nis:\n    SomeBaseType\nwith:\n    Party: this\n    bool: sentCloseRequest\nconstructor:\n    a = 10\n    b = 20\n    (z = 10)\n    k = foo(10)\n    d, e = get2things\n    call(10)\n    call(a(b(c(10, 90))))\natomic void record(items{.len > 0}:Array[], f{> 0}:Int, flag:bool, ref z:Vector<string>)\n    ledger.process(sum)\n    total += f\natomic int{> 0} send(to:Address, amount:int{> 0})\n    do(bad(stuff[0].with(\"stuff\".length)))\n";
 parse(source)(Ws.ANY_WS, rule(Mod.typedefs).yields(function (_, cst) {
     // tslint:disable-next-line:no-debugger
     // debugger;

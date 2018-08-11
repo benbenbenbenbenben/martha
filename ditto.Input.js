@@ -36,6 +36,9 @@ var Input = /** @class */ (function () {
     Input.prototype.consume = function (predicate) {
         var startloc = this.location;
         var result = predicate(this);
+        if (result.__rule__) {
+            return this.consume(ditto_1.Ditto.all.apply(ditto_1.Ditto, result));
+        }
         var output = ditto_1.Result.fault(this);
         if (result.success === false) {
             this.location = startloc;

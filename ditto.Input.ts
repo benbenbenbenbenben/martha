@@ -1,4 +1,4 @@
-import { ResultTokens, Result } from "./ditto";
+import { ResultTokens, Result, Ditto } from "./ditto";
 
 
 export class Input {
@@ -38,6 +38,9 @@ export class Input {
     consume(predicate:Function | any):Result {
         const startloc:number = this.location;
         const result:Result = predicate(this);
+        if ((result as any).__rule__) {
+            return this.consume(Ditto.all(...(result as any)));
+        }
         let output:Result =  Result.fault(this);
         if (result.success === false) {
             this.location = startloc;

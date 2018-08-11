@@ -103,77 +103,20 @@ class Util {
         Util.pushIndent,
         many(repeat, either(Util.peekIndent, Util.popIndent))
     )
-    static wswrap           = (...items:(IRule|string|RegExp|IToken)[]) => rule(...items.map(i => all(Ws.ANY_WS, i)), Ws.ANY_WS);
+    // static wswrap           = (...items:(IRule|string|RegExp|IToken)[]) => rule();
 }
 class Exp {
-    static atom         = rule(either(Ref.member, Val.anyliteral));
-    static expr_assign  = rule(Exp.atom, /\s*/, Op.anybinary, /\s*/, Exp.atom)
-    .yields((y:any) => {
-        return {
-            op: "binaryoperator",
-            parameters: [
-                y.tokens[1].name,
-                y.tokens[0].result.value,
-                y.tokens[2].result.value
-            ]
-        };
-    });
-    static expr_op      = rule(Op.anybinary, token("rhs", /\w+/))
-    .yields((y:any) => {
-        return {
-            op: "prefixoperator",
-            parameters: [
-                y.one("op"),
-                y.one("rhs")
-            ]
-        };
-    });
-    static callargs     = rule(Exp.atom, many(Op.infix_comma, Exp.atom));
-
-    static type_arg     = rule(Ref.member, ":", Exp.atom);
-    static type_args    = rule(Exp.type_arg, many(Op.infix_comma, Exp.type_arg));
-    static expr_call    = rule(Ref.member, "(", either(Exp.type_args, Exp.callargs), ")", ":")
-    .yields((y:any) => {
-        return {
-            op: "methodcall",
-            parameters: [
-                y.one("method")
-            ]
-        };
-    });
+    static atom                 = rule(either(Val.anyliteral,                       // literal
+                                            all(Ref.member, "(", () => Exp.exp, ")"),     // call
+                                            all("(", () => Exp.exp, ")"),                 // parenthesised
+                                            Ref.member));                           // member/var
+    static exp                  = rule(Exp.atom, many(/ */, Op.anybinary, / */, Exp.atom));
 }
 
 class Stmt {
-    static stmt_expression = rule(either(Exp.expr_assign, Exp.expr_call, Exp.expr_op))
-        .yields((_:any, expr:any) => {
-            return expr[0];
-        });
-    static stmt_case = rule(Ws.IND_WS, token("case", /case/), Ws.space0ton, Stmt.stmt_expression, ":", /*statements*/)
-        .yields((y:any) => {
-            return {
-                op: "case",
-                parameters: [
-                    y.one("case")
-                ]
-            };
-        });
-    static stmts_case = rule(Stmt.stmt_case, many(Stmt.stmt_case))
-    .yields((y:any) => {
-        return {
-            op: "case",
-            parameters: [
-                y.one("case")
-            ]
-        };
-    });
-    static stmt_switch = rule("switch", Ws.space0ton, Exp.atom, ":", Stmt.stmts_case)
-        .yields((y, h) => {
-            return {
-                op: "switch",
-                parameters: [
-                    h.raw
-                ]
-            };
+    static stmt_expression = rule(Exp.exp)
+        .yields((r) => {
+            return r.tokens;
         });
     static statement        = rule(either(
         Stmt.stmt_expression,
@@ -259,13 +202,6 @@ class Mod {
     static typedefs = rule(many(Mod.typedef, optional(Ws.ANY_WS)));
 }
 
-
-
-
-
-
-
-
 let source:string = `
 type:
     Party
@@ -282,6 +218,8 @@ with:
 constructor:
     a = 10
     b = 20
+    (z = 10)
+    k = foo(10)
     d, e = get2things
     call(10)
     call(a(b(c(10, 90))))
