@@ -1,5 +1,5 @@
 import { Ditto, Result, ResultTokens, Input, IRule, IToken } from "./ditto";
-const { parse, token, rule, all, many, optional, either } = Ditto;
+const { parse, token, rule, all, many, optional, either, flat } = Ditto;
 
 const prettyprint:any = (x:any) => console.log(JSON.stringify(x, null, 2));
 
@@ -21,6 +21,13 @@ class Op {
 
     static infix_comma  = rule(/\s*,\s*/);
     static infix_colon  = rule(/\s*\:\s*/);
+
+    static lsquare  = token("lsquare", "[");
+    static rsquare  = token("rsquare", "]");
+    static lcurly  = token("lcurly", "{");
+    static rcurly  = token("rcurly", "}");
+    static langle  = token("langle", "<");
+    static rangle  = token("rangle", ">");
 }
 class Val {
     static bool         = token("bool", /true|false/);
@@ -106,11 +113,71 @@ class Util {
     // static wswrap           = (...items:(IRule|string|RegExp|IToken)[]) => rule();
 }
 class Exp {
-    static atom                 = rule(either(Val.anyliteral,                               // literal
-                                            all(Ref.member, "(", () => Exp.exp, ")"),       // call
-                                            all("(", () => Exp.exp, ")"),                   // parenthesised
-                                            Ref.member));                                   // member/var
-    static exp                  = rule(Exp.atom, many(/ */, Op.anybinary, / */, Exp.atom));
+    static atomparen                = rule("(", () => Exp.exp, ")").yields(
+        (r, c) => {
+            return {
+                op: "parenthesis",
+                parameters: c
+            };
+        }
+    );
+    static atomcall                 = rule(Ref.member, "(", () => Exp.exp, ")").yields(
+        (r, c) => {
+            return {
+                op: "call",
+                parameters: c
+            };
+        }
+    );
+    static atomliteral          = rule(Val.anyliteral).yields(
+        (r) => {
+            return {
+                op: "literal",
+                parameters: [r.tokens[0].name, r.tokens[0].result.value]
+            };
+        }
+    );
+    static atomarrliteral       = rule(Op.lsquare, many(() => Exp.exp), Op.rsquare).yields(
+        (r, c) => {
+            return {
+                op:"arrayliteral",
+                parameters: c === undefined ? [] : flat(c)
+            };
+        }
+    )
+    .passes("[]", { op:"arrayliteral", parameters:[] })
+    .passes("[1]", { op:"arrayliteral", parameters:[{op:"literal",parameters:["integer","1"]}] })
+    ;
+    static atomobjliteral       = rule(Op.lcurly, many(either(all(Ref.member, Op.assign, () => Exp.exp), Ref.member)), Op.rcurly);
+    static atomlambdaliteral    = rule(Util.block(
+        either(
+            all("(", () => Def.argumentdefs, ")",),
+            () => Def.argumentdef
+        ), () => Stmt.statement));
+    static atommember           = rule(Ref.member).yields(
+        (r) => {
+            return {
+                op: "reference",
+                parameters: r.get("member")
+            };
+        }
+    );
+    static atom                 = rule(either(Exp.atomliteral,      // literal
+                                            Exp.atomcall,               // call
+                                            Exp.atomarrliteral,
+                                            Exp.atomobjliteral,
+                                            Exp.atomlambdaliteral,
+                                            Exp.atomparen,              // parenthesised
+                                            Exp.atommember)).yields(    // var member/var
+        (r, c) => {
+            return c[0];
+        }
+    );
+    static exp                  = rule(Exp.atom, many(/ */, Op.anybinary, / */, Exp.atom)).yields(
+        (r, c) => {
+            return c;
+        }
+    );
 }
 
 class Stmt {
@@ -202,6 +269,14 @@ class Mod {
     static typedefs = rule(many(Mod.typedef, optional(Ws.ANY_WS)));
 }
 
+Ditto.tests.forEach(test => {
+    var k:{actual:any, expected:any, source:string} = test();
+    if (JSON.stringify(k.actual) !== JSON.stringify(k.expected)) {
+        console.error(`[${k.source}] yields error: expected "${JSON.stringify(k.expected)}" got "${JSON.stringify(k.actual)}"`);
+    }
+});
+
+/*
 let source:string = `
 type:
     Party
@@ -216,6 +291,7 @@ with:
     Party: this
     bool: sentCloseRequest
 constructor:
+    k = [10, a, b()]
     a = 10
     b = 20
     (z = 10)
@@ -228,7 +304,7 @@ atomic void record(items{.len > 0}:Array[], f{> 0}:Int, flag:bool, ref z:Vector<
     total += f
 atomic int{> 0} send(to:Address, amount:int{> 0})
     do(bad(stuff[0].with("stuff".length)))
-`;
+`; 
 
 parse(source)
 (
@@ -241,3 +317,4 @@ parse(source)
     rule("operator:", Ws.IND_WS, /\w+/, /\w+/)
 );
 
+*/

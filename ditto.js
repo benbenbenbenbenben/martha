@@ -9,6 +9,9 @@ exports.ResultTokens = ditto_ResultTokens_1.ResultTokens;
 var Ditto = /** @class */ (function () {
     function Ditto() {
     }
+    Ditto.flat = function (arr) {
+        return arr.reduce(function (a, b) { return a.concat(Array.isArray(b) ? Ditto.flat(b) : b); }, []);
+    };
     Ditto.parse = function (source) {
         var input = new ditto_Input_1.Input(source);
         return function () {
@@ -49,8 +52,7 @@ var Ditto = /** @class */ (function () {
         // console.log(JSON.stringify(matches, null, 2));
         input.end();
         if (rule.yielder) {
-            var temp = rule.yielder(tokens, matches.map(function (match) { return match.yielded; }));
-            console.log(temp);
+            rule.yielder(tokens, matches.map(function (match) { return match.yielded; }));
         }
         return true;
         // rule(...matches);
@@ -66,20 +68,17 @@ var Ditto = /** @class */ (function () {
             predicates.yielder = handler;
             return predicates;
         };
-        // this is not ideal
-        predicates.append = function () {
-            var patterns = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                patterns[_i] = arguments[_i];
-            }
-            var newpredicates = Ditto.ensurePredicates.apply(Ditto, patterns);
-            for (var _a = 0, newpredicates_1 = newpredicates; _a < newpredicates_1.length; _a++) {
-                var newpredicate = newpredicates_1[_a];
-                predicates.push(newpredicate);
-            }
+        predicates.passes = function (source, expected) {
+            Ditto.tests.push(function () {
+                var result = null;
+                Ditto.parse(source)(Ditto.rule(predicates).yields(function (r, c) {
+                    result = c[0];
+                    return null;
+                }));
+                return { expected: expected, actual: result, source: predicates.toString() };
+            });
             return predicates;
         };
-        //
         return predicates;
     };
     Ditto.debugrule = function () {
@@ -141,7 +140,7 @@ var Ditto = /** @class */ (function () {
                     return pattern;
                 // subrule case, trampoline time!
                 case "Array":
-                    return function (input) {
+                    predicate = function (input) {
                         if (pattern.breakonentry) {
                             // tslint:disable-next-line:no-debugger
                             debugger;
@@ -161,6 +160,10 @@ var Ditto = /** @class */ (function () {
                             return Ditto.all.apply(Ditto, pattern)(input);
                         }
                     };
+                    predicate.toString = function () {
+                        return "pred:" + pattern.map(function (p) { return p.toString(); }).join("/");
+                    };
+                    return predicate;
                 default:
                     throw new Error("oops");
             }
@@ -264,6 +267,7 @@ var Ditto = /** @class */ (function () {
         func[0].__token__ = name;
         return func[0];
     };
+    Ditto.tests = [];
     return Ditto;
 }());
 exports.Ditto = Ditto;

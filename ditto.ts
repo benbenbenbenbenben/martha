@@ -3,6 +3,12 @@ import { Result } from "./ditto.Result";
 import { ResultTokens } from "./ditto.ResultTokens";
 
 class Ditto {
+    public static tests:(() => ({actual:any, expected:any, source:string}))[] = [];
+    public static flat(arr:any[]):any[] {
+        return arr.reduce(
+            (a, b) => a.concat(Array.isArray(b) ? Ditto.flat(b) : b), []
+        );
+    }
     public static parse(source:string):(...rules:any[]) => any {
         let input:Input = new Input(source);
         return (...rules:any[]): any => {
@@ -37,8 +43,7 @@ class Ditto {
         // console.log(JSON.stringify(matches, null, 2));
         input.end();
         if (rule.yielder) {
-            let temp:any = rule.yielder(tokens, matches.map(match => match.yielded));
-            console.log(temp);
+            rule.yielder(tokens, matches.map(match => match.yielded));
         }
         return true;
         // rule(...matches);
@@ -50,15 +55,19 @@ class Ditto {
             predicates.yielder = handler;
             return predicates;
         };
-        // this is not ideal
-        predicates.append = (...patterns:any[]):any => {
-            let newpredicates:any = Ditto.ensurePredicates(...patterns);
-            for (var newpredicate of newpredicates) {
-                predicates.push(newpredicate);
-            }
+        predicates.passes = (source:string, expected:any):IRule => {
+            Ditto.tests.push(() => {
+                let result:any = null;
+                Ditto.parse(source)(Ditto.rule(
+                    predicates
+                ).yields((r,c) => {
+                    result = c[0];
+                    return null;
+                }));
+                return { expected: expected, actual: result, source: predicates.toString() };
+            });
             return predicates;
         };
-        //
         return predicates;
     }
     public static debugrule(...patterns:any[]):any {
@@ -112,7 +121,7 @@ class Ditto {
                 return pattern;
                 // subrule case, trampoline time!
                 case "Array":
-                return (input:Input):Result => {
+                predicate = (input:Input):Result => {
                     if (pattern.breakonentry) {
                         // tslint:disable-next-line:no-debugger
                         debugger;
@@ -131,6 +140,10 @@ class Ditto {
                         return Ditto.all(...pattern)(input);
                     }
                 };
+                predicate.toString = () => {
+                    return "pred:" + pattern.map((p:any) => p.toString()).join("/");
+                };
+                return predicate;
                 default:
                 throw new Error("oops");
             }
@@ -227,6 +240,7 @@ interface IToken {
 interface IRule {
     (...pattern:any[]): IRule;
     yields(yielder:IRuleAction):IRule;
+    passes(source:string, expect:any):IRule;
 }
 export {
     Ditto,

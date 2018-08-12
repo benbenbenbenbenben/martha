@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var ditto_1 = require("./ditto");
-var parse = ditto_1.Ditto.parse, token = ditto_1.Ditto.token, rule = ditto_1.Ditto.rule, all = ditto_1.Ditto.all, many = ditto_1.Ditto.many, optional = ditto_1.Ditto.optional, either = ditto_1.Ditto.either;
+var parse = ditto_1.Ditto.parse, token = ditto_1.Ditto.token, rule = ditto_1.Ditto.rule, all = ditto_1.Ditto.all, many = ditto_1.Ditto.many, optional = ditto_1.Ditto.optional, either = ditto_1.Ditto.either, flat = ditto_1.Ditto.flat;
 var prettyprint = function (x) { return console.log(JSON.stringify(x, null, 2)); };
 // const op
 // let op:any = rule(spaces, token("op", /\=|\+\=|\-\=|and|or|not|xor/), spaces);
@@ -25,6 +25,12 @@ var Op = /** @class */ (function () {
     Op.dot = token("dot", ".");
     Op.infix_comma = rule(/\s*,\s*/);
     Op.infix_colon = rule(/\s*\:\s*/);
+    Op.lsquare = token("lsquare", "[");
+    Op.rsquare = token("rsquare", "]");
+    Op.lcurly = token("lcurly", "{");
+    Op.rcurly = token("rcurly", "}");
+    Op.langle = token("langle", "<");
+    Op.rangle = token("rangle", ">");
     return Op;
 }());
 var Val = /** @class */ (function () {
@@ -124,11 +130,50 @@ var Util = /** @class */ (function () {
 var Exp = /** @class */ (function () {
     function Exp() {
     }
-    Exp.atom = rule(either(Val.anyliteral, // literal
-    all(Ref.member, "(", function () { return Exp.exp; }, ")"), // call
-    all("(", function () { return Exp.exp; }, ")"), // parenthesised
-    Ref.member)); // member/var
-    Exp.exp = rule(Exp.atom, many(/ */, Op.anybinary, / */, Exp.atom));
+    Exp.atomparen = rule("(", function () { return Exp.exp; }, ")").yields(function (r, c) {
+        return {
+            op: "parenthesis",
+            parameters: c
+        };
+    });
+    Exp.atomcall = rule(Ref.member, "(", function () { return Exp.exp; }, ")").yields(function (r, c) {
+        return {
+            op: "call",
+            parameters: c
+        };
+    });
+    Exp.atomliteral = rule(Val.anyliteral).yields(function (r) {
+        return {
+            op: "literal",
+            parameters: [r.tokens[0].name, r.tokens[0].result.value]
+        };
+    });
+    Exp.atomarrliteral = rule(Op.lsquare, many(function () { return Exp.exp; }), Op.rsquare).yields(function (r, c) {
+        return {
+            op: "arrayliteral",
+            parameters: c === undefined ? [] : flat(c)
+        };
+    })
+        .passes("[]", { op: "arrayliteral", parameters: [] })
+        .passes("[1]", { op: "arrayliteral", parameters: [{ op: "literal", parameters: ["integer", "1"] }] });
+    Exp.atomobjliteral = rule(Op.lcurly, many(either(all(Ref.member, Op.assign, function () { return Exp.exp; }), Ref.member)), Op.rcurly);
+    Exp.atomlambdaliteral = rule(Util.block(either(all("(", function () { return Def.argumentdefs; }, ")"), function () { return Def.argumentdef; }), function () { return Stmt.statement; }));
+    Exp.atommember = rule(Ref.member).yields(function (r) {
+        return {
+            op: "reference",
+            parameters: r.get("member")
+        };
+    });
+    Exp.atom = rule(either(Exp.atomliteral, // literal
+    Exp.atomcall, // call
+    Exp.atomarrliteral, Exp.atomobjliteral, Exp.atomlambdaliteral, Exp.atomparen, // parenthesised
+    Exp.atommember)).yields(// var member/var
+    function (r, c) {
+        return c[0];
+    });
+    Exp.exp = rule(Exp.atom, many(/ */, Op.anybinary, / */, Exp.atom)).yields(function (r, c) {
+        return c;
+    });
     return Exp;
 }());
 var Stmt = /** @class */ (function () {
@@ -196,10 +241,52 @@ var Mod = /** @class */ (function () {
     Mod.typedefs = rule(many(Mod.typedef, optional(Ws.ANY_WS)));
     return Mod;
 }());
-var source = "\ntype:\n    Party\nis:\n    Address\n\ntype:\n    Buyer, Seller, BuyerRep, SellerRep\nis:\n    SomeBaseType\nwith:\n    Party: this\n    bool: sentCloseRequest\nconstructor:\n    a = 10\n    b = 20\n    (z = 10)\n    k = foo(10)\n    d, e = get2things\n    call(10)\n    call(a(b(c(10, 90))))\natomic void record(items{.len > 0}:Array[], f{> 0}:Int, flag:bool, ref z:Vector<string>)\n    ledger.process(sum)\n    total += f\natomic int{> 0} send(to:Address, amount:int{> 0})\n    do(bad(stuff[0].with(\"stuff\".length)))\n";
-parse(source)(Ws.ANY_WS, rule(Mod.typedefs).yields(function (_, cst) {
-    // tslint:disable-next-line:no-debugger
-    // debugger;
-    prettyprint(cst);
-}), rule("operator:", Ws.IND_WS, /\w+/, /\w+/));
+ditto_1.Ditto.tests.forEach(function (test) {
+    var k = test();
+    if (JSON.stringify(k.actual) !== JSON.stringify(k.expected)) {
+        console.error("[" + k.source + "] yields error: expected \"" + JSON.stringify(k.expected) + "\" got \"" + JSON.stringify(k.actual) + "\"");
+    }
+});
+/*
+let source:string = `
+type:
+    Party
+is:
+    Address
+
+type:
+    Buyer, Seller, BuyerRep, SellerRep
+is:
+    SomeBaseType
+with:
+    Party: this
+    bool: sentCloseRequest
+constructor:
+    k = [10, a, b()]
+    a = 10
+    b = 20
+    (z = 10)
+    k = foo(10)
+    d, e = get2things
+    call(10)
+    call(a(b(c(10, 90))))
+atomic void record(items{.len > 0}:Array[], f{> 0}:Int, flag:bool, ref z:Vector<string>)
+    ledger.process(sum)
+    total += f
+atomic int{> 0} send(to:Address, amount:int{> 0})
+    do(bad(stuff[0].with("stuff".length)))
+`;
+
+parse(source)
+(
+    Ws.ANY_WS,
+    rule(Mod.typedefs).yields((_:any, cst:any) => {
+        // tslint:disable-next-line:no-debugger
+        // debugger;
+        prettyprint(cst);
+    }),
+    rule("operator:", Ws.IND_WS, /\w+/, /\w+/)
+);
+
+*/ 
 //# sourceMappingURL=index.js.map
