@@ -2,9 +2,30 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var ditto_1 = require("./ditto");
 var parse = ditto_1.Ditto.parse, token = ditto_1.Ditto.token, rule = ditto_1.Ditto.rule, all = ditto_1.Ditto.all, many = ditto_1.Ditto.many, optional = ditto_1.Ditto.optional, either = ditto_1.Ditto.either, flat = ditto_1.Ditto.flat;
+// helpers
+var manysep = function (sep) {
+    var pattern = [];
+    for (var _i = 1; _i < arguments.length; _i++) {
+        pattern[_i - 1] = arguments[_i];
+    }
+    return optional.apply(void 0, pattern.concat([many.apply(void 0, [sep].concat(pattern))]));
+};
 var prettyprint = function (x) { return console.log(JSON.stringify(x, null, 2)); };
 // const op
 // let op:any = rule(spaces, token("op", /\=|\+\=|\-\=|and|or|not|xor/), spaces);
+var Mcro = /** @class */ (function () {
+    function Mcro() {
+    }
+    Mcro._new = token("new", "new");
+    Mcro._typeof = token("typeof", "typeof");
+    Mcro._sizeof = token("sizeof", "sizeof");
+    Mcro._addrof = token("addrof", /addrof|addressof/);
+    Mcro.stateof = token("stateof", "stateof");
+    Mcro.delete = token("delete", "delete");
+    Mcro.return = token("return", "return");
+    Mcro.swapto = token("swapto", "swapto");
+    return Mcro;
+}());
 var Op = /** @class */ (function () {
     function Op() {
     }
@@ -130,17 +151,45 @@ var Util = /** @class */ (function () {
 var Exp = /** @class */ (function () {
     function Exp() {
     }
-    Exp.atomparen = rule("(", function () { return Exp.exp; }, ")").yields(function (r, c) {
+    Exp.atomparen = rule("(", optional(function () { return Exp.exp; }), ")").yields(function (r, c) {
         return {
             op: "parenthesis",
-            parameters: c
+            parameters: c ? flat(c) : undefined
         };
-    });
-    Exp.atomcall = rule(Ref.member, "(", function () { return Exp.exp; }, ")").yields(function (r, c) {
+    })
+        .passes("()", { op: "parenthesis" })
+        .passes("(1)", { op: "parenthesis", parameters: [{ op: "literal", parameters: ["integer", "1"] }] });
+    Exp.atomcall = rule(Ref.member, "(", optional(function () { return Exp.exp; }, many(Op.infix_comma, function () { return Exp.exp; })), ")").yields(function (r, c) {
         return {
             op: "call",
-            parameters: c
+            parameters: c === undefined ? [
+                r.get("member")
+            ] : [
+                r.get("member")
+            ].concat(flat(c))
         };
+    })
+        .passes("k()", { op: "call", parameters: [["k"]] })
+        .passes("k.q()", { op: "call", parameters: [["k", "q"]] })
+        .passes("k.q(1)", { op: "call", parameters: [["k", "q"], { op: "literal", parameters: ["integer", "1"] }] })
+        .passes("k([1,2,3],[a.aa,b,c])", {
+        op: "call", parameters: [
+            ["k"], {
+                op: "arrayliteral",
+                parameters: [
+                    { op: "literal", parameters: ["integer", "1"] },
+                    { op: "literal", parameters: ["integer", "2"] },
+                    { op: "literal", parameters: ["integer", "3"] }
+                ]
+            }, {
+                op: "arrayliteral",
+                parameters: [
+                    { op: "reference", parameters: ["a", "aa"] },
+                    { op: "reference", parameters: ["b"] },
+                    { op: "reference", parameters: ["c"] }
+                ]
+            }
+        ]
     });
     Exp.atomliteral = rule(Val.anyliteral).yields(function (r) {
         return {
@@ -148,15 +197,40 @@ var Exp = /** @class */ (function () {
             parameters: [r.tokens[0].name, r.tokens[0].result.value]
         };
     });
-    Exp.atomarrliteral = rule(Op.lsquare, many(function () { return Exp.exp; }), Op.rsquare).yields(function (r, c) {
+    Exp.atomarrliteral = rule(Op.lsquare, optional(function () { return Exp.exp; }, (many(Op.infix_comma, function () { return Exp.exp; }))), Op.rsquare).yields(function (r, c) {
         return {
             op: "arrayliteral",
             parameters: c === undefined ? [] : flat(c)
         };
     })
         .passes("[]", { op: "arrayliteral", parameters: [] })
-        .passes("[1]", { op: "arrayliteral", parameters: [{ op: "literal", parameters: ["integer", "1"] }] });
-    Exp.atomobjliteral = rule(Op.lcurly, many(either(all(Ref.member, Op.assign, function () { return Exp.exp; }), Ref.member)), Op.rcurly);
+        .passes("[1]", { op: "arrayliteral", parameters: [{ op: "literal", parameters: ["integer", "1"] }] })
+        .passes("[[]]", { op: "arrayliteral", parameters: [{ op: "arrayliteral", parameters: [] }] })
+        .passes("[k()]", { op: "arrayliteral", parameters: [{ op: "call", parameters: [["k"]] }] })
+        .passes("[1,2,3]", { op: "arrayliteral", parameters: [
+            { op: "literal", parameters: ["integer", "1"] },
+            { op: "literal", parameters: ["integer", "2"] },
+            { op: "literal", parameters: ["integer", "3"] }
+        ] });
+    Exp.atomobjliteral = rule(Op.lcurly, manysep(Op.infix_comma, either(all(Ref.member, Op.assign, function () { return Exp.exp; }), Ref.member)), Op.rcurly)
+        .yields(function (r, c) {
+        return {
+            op: "literal",
+            parameters: r.get("member")
+                ? ["object"].concat(r.get("member").map(function (m, i) { return { op: "assign", parameters: [m].concat(flat(c)[i]) }; })) : ["object"]
+        };
+    })
+        .passes("{}", { op: "literal", parameters: ["object"] })
+        .passes("{a=2}", { op: "literal", parameters: ["object", {
+                op: "assign", parameters: ["a", { op: "literal", parameters: ["integer", "2"] }]
+            }
+        ] })
+        .passes("{a=2,b=0}", { op: "literal", parameters: ["object", {
+                op: "assign", parameters: ["a", { op: "literal", parameters: ["integer", "2"] }]
+            }, {
+                op: "assign", parameters: ["b", { op: "literal", parameters: ["integer", "0"] }]
+            }
+        ] });
     Exp.atomlambdaliteral = rule(Util.block(either(all("(", function () { return Def.argumentdefs; }, ")"), function () { return Def.argumentdef; }), function () { return Stmt.statement; }));
     Exp.atommember = rule(Ref.member).yields(function (r) {
         return {
@@ -244,7 +318,7 @@ var Mod = /** @class */ (function () {
 ditto_1.Ditto.tests.forEach(function (test) {
     var k = test();
     if (JSON.stringify(k.actual) !== JSON.stringify(k.expected)) {
-        console.error("[" + k.source + "] yields error: expected \"" + JSON.stringify(k.expected) + "\" got \"" + JSON.stringify(k.actual) + "\"");
+        console.error("[" + k.source + "]\r\n\tyields error:\r\n\texpected\r\n\t\"" + JSON.stringify(k.expected) + "\"\r\n\tgot\r\n\t\"" + JSON.stringify(k.actual) + "\"");
     }
 });
 /*

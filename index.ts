@@ -1,10 +1,27 @@
 import { Ditto, Result, ResultTokens, Input, IRule, IToken } from "./ditto";
 const { parse, token, rule, all, many, optional, either, flat } = Ditto;
 
+type Pattern = string|RegExp|IToken|IRule;
+
+// helpers
+const manysep:any = (sep:Pattern, ...pattern:Pattern[]):(input:Input) => Result => {
+    return optional(...pattern, many(sep, ...pattern));
+};
+
 const prettyprint:any = (x:any) => console.log(JSON.stringify(x, null, 2));
 
 // const op
 // let op:any = rule(spaces, token("op", /\=|\+\=|\-\=|and|or|not|xor/), spaces);
+class Mcro {
+    static _new     = token("new", "new");
+    static _typeof  = token("typeof", "typeof");
+    static _sizeof  = token("sizeof", "sizeof");
+    static _addrof  = token("addrof", /addrof|addressof/);
+    static stateof  = token("stateof", "stateof");
+    static delete   = token("delete", "delete");
+    static return   = token("return", "return");
+    static swapto   = token("swapto", "swapto");
+}
 class Op {
     // binary infix
     static assign   = token("assign", "=");
@@ -113,22 +130,53 @@ class Util {
     // static wswrap           = (...items:(IRule|string|RegExp|IToken)[]) => rule();
 }
 class Exp {
-    static atomparen                = rule("(", () => Exp.exp, ")").yields(
+    static atomparen                = rule("(", optional(() => Exp.exp), ")").yields(
         (r, c) => {
             return {
                 op: "parenthesis",
-                parameters: c
+                parameters: c ? flat(c) : undefined
             };
         }
-    );
-    static atomcall                 = rule(Ref.member, "(", () => Exp.exp, ")").yields(
+    )
+    .passes("()", {op:"parenthesis"})
+    .passes("(1)", {op:"parenthesis", parameters:[{op:"literal",parameters:["integer","1"]}]})
+    ;
+    static atomcall                 = rule(Ref.member, "(", optional(() => Exp.exp, many(Op.infix_comma, () => Exp.exp)), ")").yields(
         (r, c) => {
             return {
                 op: "call",
-                parameters: c
+                parameters: c === undefined ? [
+                    r.get("member")
+                ] : [
+                    r.get("member"),
+                    ...flat(c)
+                ]
             };
         }
-    );
+    )
+    .passes("k()", { op:"call", parameters:[["k"]] })
+    .passes("k.q()", { op:"call", parameters:[["k","q"]] })
+    .passes("k.q(1)", { op:"call", parameters:[["k","q"], {op:"literal", parameters:["integer","1"]}] })
+    .passes("k([1,2,3],[a.aa,b,c])", {
+        op:"call", parameters:[
+            ["k"], {
+                op:"arrayliteral",
+                parameters:[
+                    {op:"literal", parameters:["integer","1"]},
+                    {op:"literal", parameters:["integer","2"]},
+                    {op:"literal", parameters:["integer","3"]}
+                ]
+            },{
+                op:"arrayliteral",
+                parameters:[
+                    {op:"reference", parameters:["a","aa"]},
+                    {op:"reference", parameters:["b"]},
+                    {op:"reference", parameters:["c"]}
+                ]
+            }
+        ]
+    })
+    ;
     static atomliteral          = rule(Val.anyliteral).yields(
         (r) => {
             return {
@@ -137,7 +185,7 @@ class Exp {
             };
         }
     );
-    static atomarrliteral       = rule(Op.lsquare, many(() => Exp.exp), Op.rsquare).yields(
+    static atomarrliteral       = rule(Op.lsquare, optional(() => Exp.exp, (many(Op.infix_comma, () => Exp.exp))), Op.rsquare).yields(
         (r, c) => {
             return {
                 op:"arrayliteral",
@@ -147,8 +195,40 @@ class Exp {
     )
     .passes("[]", { op:"arrayliteral", parameters:[] })
     .passes("[1]", { op:"arrayliteral", parameters:[{op:"literal",parameters:["integer","1"]}] })
+    .passes("[[]]", { op:"arrayliteral", parameters:[{op:"arrayliteral", parameters:[]}] })
+    .passes("[k()]", { op:"arrayliteral", parameters:[{op:"call", parameters:[["k"]]}] })
+    .passes("[1,2,3]", { op:"arrayliteral", parameters:[
+        {op:"literal",parameters:["integer","1"]},
+        {op:"literal",parameters:["integer","2"]},
+        {op:"literal",parameters:["integer","3"]}
+    ]})
     ;
-    static atomobjliteral       = rule(Op.lcurly, many(either(all(Ref.member, Op.assign, () => Exp.exp), Ref.member)), Op.rcurly);
+    static atomobjliteral       = rule(Op.lcurly,
+        manysep(Op.infix_comma, either(all(Ref.member, Op.assign, () => Exp.exp), Ref.member)),
+        Op.rcurly
+    )
+    .yields(
+        (r, c) => {
+            return {
+                op:"literal",
+                parameters: r.get("member")
+                ? ["object", ...r.get("member").map((m:string,i:any) => { return { op:"assign", parameters:[m, ...flat(c)[i]] };})]
+                : ["object"]
+            };
+        }
+    )
+    .passes("{}",{op:"literal",parameters:["object"]})
+    .passes("{a=2}",{op:"literal",parameters:["object",{
+            op:"assign",parameters:["a",{op:"literal",parameters:["integer","2"]}]
+        }
+    ]})
+    .passes("{a=2,b=0}",{op:"literal",parameters:["object",{
+            op:"assign",parameters:["a",{op:"literal",parameters:["integer","2"]}]
+        },{
+            op:"assign",parameters:["b",{op:"literal",parameters:["integer","0"]}]
+        }
+    ]})
+    ;
     static atomlambdaliteral    = rule(Util.block(
         either(
             all("(", () => Def.argumentdefs, ")",),
@@ -272,7 +352,7 @@ class Mod {
 Ditto.tests.forEach(test => {
     var k:{actual:any, expected:any, source:string} = test();
     if (JSON.stringify(k.actual) !== JSON.stringify(k.expected)) {
-        console.error(`[${k.source}] yields error: expected "${JSON.stringify(k.expected)}" got "${JSON.stringify(k.actual)}"`);
+        console.error(`[${k.source}]\r\n\tyields error:\r\n\texpected\r\n\t"${JSON.stringify(k.expected)}"\r\n\tgot\r\n\t"${JSON.stringify(k.actual)}"`);
     }
 });
 

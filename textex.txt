@@ -16,6 +16,8 @@ constructor:
     d, e = get2things
     call(10)
     call(a(b(c(10, 90))))
+    z = g : g ** g
+    j = u * 4 for u in 1..100
 atomic void record(items{.len > 0}:Array[], f{> 0}:Int, flag:bool, ref z:Vector<string>)
     ledger.process(sum)
     total += f

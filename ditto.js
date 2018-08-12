@@ -237,7 +237,7 @@ var Ditto = /** @class */ (function () {
         for (var _i = 0; _i < arguments.length; _i++) {
             patterns[_i] = arguments[_i];
         }
-        return function (input) {
+        var many = function (input) {
             var location;
             var consumed = [];
             var current;
@@ -261,6 +261,10 @@ var Ditto = /** @class */ (function () {
             }
             return ditto_Result_1.Result.composite.apply(ditto_Result_1.Result, consumed);
         };
+        many.toString = function () {
+            return "many:" + patterns.map(function (p) { return p.toString(); }).join("/");
+        };
+        return many;
     };
     Ditto.token = function (name, pattern) {
         var func = Ditto.ensurePredicates(pattern);

@@ -200,7 +200,7 @@ class Ditto {
     }
 
     public static many(...patterns:any[]):(input:Input) => Result {
-        return (input:Input):Result => {
+        const many:any = (input:Input):Result => {
             let location:number;
             let consumed:Result[] = [];
             let current:Result;
@@ -223,6 +223,10 @@ class Ditto {
             }
             return Result.composite(...consumed);
         };
+        many.toString = () => {
+            return "many:" + patterns.map(p => p.toString()).join("/");
+        };
+        return many;
     }
 
     public static token(name:string, pattern:RegExp | string):IToken {
