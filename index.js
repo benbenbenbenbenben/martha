@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var ditto_1 = require("./ditto");
 var parse = ditto_1.Ditto.parse, token = ditto_1.Ditto.token, rule = ditto_1.Ditto.rule, all = ditto_1.Ditto.all, many = ditto_1.Ditto.many, optional = ditto_1.Ditto.optional, either = ditto_1.Ditto.either, flat = ditto_1.Ditto.flat;
+var martha_ast_1 = require("./martha.ast");
 // helpers
 var manysep = function (sep) {
     var pattern = [];
@@ -31,7 +32,21 @@ var Op = /** @class */ (function () {
     }
     Object.defineProperty(Op, "anybinary", {
         get: function () {
-            return either(this.assign, this.pluseq, this.lt, this.lte, this.gt, this.gte, this.dot);
+            return either(this.assign, this.pluseq, this.lt, this.lte, this.gt, this.gte, this.dot, this.plus, this.minus, this.div, this.mult, this.mod);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Op, "anyprefix", {
+        get: function () {
+            return either(this.plusplus, this.minusminus);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Op, "anypostfix", {
+        get: function () {
+            return either(this.plusplus, this.minusminus);
         },
         enumerable: true,
         configurable: true
@@ -44,6 +59,14 @@ var Op = /** @class */ (function () {
     Op.gt = token("gt", ">");
     Op.gte = token("gte", ">=");
     Op.dot = token("dot", ".");
+    Op.plus = token("plus", "+");
+    Op.minus = token("minus", "-");
+    Op.div = token("div", "/");
+    Op.mult = token("mult", "*");
+    Op.mod = token("mod", "%");
+    // prefix/suffix
+    Op.plusplus = token("plusplus", "++");
+    Op.minusminus = token("minusminus", "--");
     Op.infix_comma = rule(/\s*,\s*/);
     Op.infix_colon = rule(/\s*\:\s*/);
     Op.lsquare = token("lsquare", "[");
@@ -151,24 +174,12 @@ var Util = /** @class */ (function () {
 var Exp = /** @class */ (function () {
     function Exp() {
     }
-    Exp.atomparen = rule("(", optional(function () { return Exp.exp; }), ")").yields(function (r, c) {
-        return {
-            op: "parenthesis",
-            parameters: c ? flat(c) : undefined
-        };
-    })
+    Exp.atomparen = rule("(", optional(function () { return Exp.exp; }), ")")
+        .yields(martha_ast_1.AST.atomparen)
         .passes("()", { op: "parenthesis" })
         .passes("(1)", { op: "parenthesis", parameters: [{ op: "literal", parameters: ["integer", "1"] }] });
-    Exp.atomcall = rule(Ref.member, "(", optional(function () { return Exp.exp; }, many(Op.infix_comma, function () { return Exp.exp; })), ")").yields(function (r, c) {
-        return {
-            op: "call",
-            parameters: c === undefined ? [
-                r.get("member")
-            ] : [
-                r.get("member")
-            ].concat(flat(c))
-        };
-    })
+    Exp.atomcall = rule(Ref.member, "(", optional(function () { return Exp.exp; }, many(Op.infix_comma, function () { return Exp.exp; })), ")")
+        .yields(martha_ast_1.AST.atomcall)
         .passes("k()", { op: "call", parameters: [["k"]] })
         .passes("k.q()", { op: "call", parameters: [["k", "q"]] })
         .passes("k.q(1)", { op: "call", parameters: [["k", "q"], { op: "literal", parameters: ["integer", "1"] }] })
@@ -191,18 +202,10 @@ var Exp = /** @class */ (function () {
             }
         ]
     });
-    Exp.atomliteral = rule(Val.anyliteral).yields(function (r) {
-        return {
-            op: "literal",
-            parameters: [r.tokens[0].name, r.tokens[0].result.value]
-        };
-    });
-    Exp.atomarrliteral = rule(Op.lsquare, optional(function () { return Exp.exp; }, (many(Op.infix_comma, function () { return Exp.exp; }))), Op.rsquare).yields(function (r, c) {
-        return {
-            op: "arrayliteral",
-            parameters: c === undefined ? [] : flat(c)
-        };
-    })
+    Exp.atomliteral = rule(Val.anyliteral)
+        .yields(martha_ast_1.AST.atomliteral);
+    Exp.atomarrliteral = rule(Op.lsquare, optional(function () { return Exp.exp; }, (many(Op.infix_comma, function () { return Exp.exp; }))), Op.rsquare)
+        .yields(martha_ast_1.AST.atomarrliteral)
         .passes("[]", { op: "arrayliteral", parameters: [] })
         .passes("[1]", { op: "arrayliteral", parameters: [{ op: "literal", parameters: ["integer", "1"] }] })
         .passes("[[]]", { op: "arrayliteral", parameters: [{ op: "arrayliteral", parameters: [] }] })
@@ -213,13 +216,7 @@ var Exp = /** @class */ (function () {
             { op: "literal", parameters: ["integer", "3"] }
         ] });
     Exp.atomobjliteral = rule(Op.lcurly, manysep(Op.infix_comma, either(all(Ref.member, Op.assign, function () { return Exp.exp; }), Ref.member)), Op.rcurly)
-        .yields(function (r, c) {
-        return {
-            op: "literal",
-            parameters: r.get("member")
-                ? ["object"].concat(r.get("member").map(function (m, i) { return { op: "assign", parameters: [m].concat(flat(c)[i]) }; })) : ["object"]
-        };
-    })
+        .yields(martha_ast_1.AST.atomobjliteral)
         .passes("{}", { op: "literal", parameters: ["object"] })
         .passes("{a=2}", { op: "literal", parameters: ["object", {
                 op: "assign", parameters: ["a", { op: "literal", parameters: ["integer", "2"] }]
@@ -232,22 +229,19 @@ var Exp = /** @class */ (function () {
             }
         ] });
     Exp.atomlambdaliteral = rule(Util.block(either(all("(", function () { return Def.argumentdefs; }, ")"), function () { return Def.argumentdef; }), function () { return Stmt.statement; }));
-    Exp.atommember = rule(Ref.member).yields(function (r) {
-        return {
-            op: "reference",
-            parameters: r.get("member")
-        };
-    });
-    Exp.atom = rule(either(Exp.atomliteral, // literal
-    Exp.atomcall, // call
-    Exp.atomarrliteral, Exp.atomobjliteral, Exp.atomlambdaliteral, Exp.atomparen, // parenthesised
-    Exp.atommember)).yields(// var member/var
-    function (r, c) {
-        return c[0];
-    });
-    Exp.exp = rule(Exp.atom, many(/ */, Op.anybinary, / */, Exp.atom)).yields(function (r, c) {
-        return c;
-    });
+    Exp.atommember = rule(Ref.member)
+        .yields(martha_ast_1.AST.atommember);
+    Exp.atom = rule(optional(rule(Op.anyprefix).yields(martha_ast_1.AST.prefixop)), either(Exp.atomliteral, Exp.atomcall, Exp.atomarrliteral, Exp.atomobjliteral, Exp.atomlambdaliteral, Exp.atomparen, Exp.atommember), optional(rule(Op.anypostfix).yields(martha_ast_1.AST.postfixop)))
+        .yields(martha_ast_1.AST.atom)
+        .passes("a++", [{ op: "reference", parameters: ["a"] }, { op: "postfix", parameters: ["plusplus"] }])
+        .passes("++a", [{ op: "prefix", parameters: ["plusplus"] }, { op: "reference", parameters: ["a"] }]);
+    Exp.exp = rule(Exp.atom, many(/ */, Op.anybinary, / */, Exp.atom))
+        .yields(martha_ast_1.AST.exp)
+        .passes("a + b + c", [
+        { "op": "reference", "parameters": ["a"] }, { "op": "plus" },
+        { "op": "reference", "parameters": ["b"] }, { "op": "plus" },
+        { "op": "reference", "parameters": ["c"] }
+    ]);
     return Exp;
 }());
 var Stmt = /** @class */ (function () {
@@ -272,9 +266,8 @@ var Def = /** @class */ (function () {
     Def.argumentdef = rule(Ref.varname, ":", Ref.typename, optional(Def.argumentspec));
     Def.returntype = rule(Ref.typename, optional(Def.argumentspec));
     Def.argumentdefs = rule(Def.argumentdef, many(Op.infix_comma, Def.argumentdef));
-    Def.methoddef = rule(Util.block(all(optional(many(Kwrd.anyaccess, Ws.space1ton)), optional(Kwrd.static, Ws.space1ton), optional(Kwrd.async, Ws.space1ton), optional(Kwrd.atomic, Ws.space1ton), either(all(Def.returntype, Ws.space1ton, token("name", /w+/)), Kwrd.ctor), optional("(", optional(Def.argumentdefs), ")")), Stmt.statement)).yields(function (r, c) {
-        console.log(r, c);
-    });
+    Def.methoddef = rule(Util.block(all(optional(many(Kwrd.anyaccess, Ws.space1ton)), optional(Kwrd.static, Ws.space1ton), optional(Kwrd.async, Ws.space1ton), optional(Kwrd.atomic, Ws.space1ton), either(all(Def.returntype, Ws.space1ton, token("name", /w+/)), Kwrd.ctor), optional("(", optional(Def.argumentdefs), ")")), Stmt.statement))
+        .yields(martha_ast_1.AST.exp);
     Def.membernames = rule(Ref.member, many(optional(Op.infix_comma, Ref.member)));
     return Def;
 }());
@@ -282,43 +275,20 @@ var Mod = /** @class */ (function () {
     function Mod() {
     }
     Mod.typedec = rule(Ref.typename, many(optional(Op.infix_comma, Ref.typename)))
-        .yields(function (r) {
-        return {
-            typenames: r.get("typename")
-        };
-    });
-    Mod.typedef_member = rule(optional(either(all(Ws.space0ton, Ws.newline, Ws.getIndent), // this is automatically the last IND from IND_WS
-    Ws.space0ton)), Ref.typename, Op.infix_colon, Def.membernames).yields(function (raw) {
-        return { members: raw.get("member").map(function (name) { return { name: name, type: raw.one("typename") }; }) };
-    });
-    Mod.typedef_members = rule(many(Mod.typedef_member)).yields(function (_, cst) {
-        // the flattening!
-        return { members: [].concat.apply([], ([].concat.apply([], ([].concat.apply([], cst))).map(function (x) { return x.members; }))) };
-    });
-    Mod.typedef = rule(Util.block(Kwrd.type, Mod.typedec), optional(Util.block(Kwrd.is, Ref.basetypename)), optional(Util.block(Kwrd.with, Mod.typedef_members)), many(Def.methoddef)).yields(function (raw, cst) {
-        var types = cst[0][0][0][0].typenames.map(function (name) {
-            var type = {
-                name: name
-            };
-            if (raw.one("basetypename")) {
-                type.basetype = raw.one("basetypename");
-            }
-            if (cst[1] && cst[1][0]) {
-                type.members = cst[1][0][0][0][0].members;
-            }
-            return type;
-        });
-        return {
-            types: types
-        };
-    });
-    Mod.typedefs = rule(many(Mod.typedef, optional(Ws.ANY_WS)));
+        .yields(martha_ast_1.AST.typedef_name)
+        .passes("Foo,Bar", { "typenames": ["Foo", "Bar"] })
+        .passes("Foo", { "typenames": ["Foo"] });
+    Mod.typedef_member = rule(Ref.typename, Op.infix_colon, Def.membernames)
+        .yields(martha_ast_1.AST.typedef_member);
+    Mod.typedef = rule(Util.block(Kwrd.type, Mod.typedec), optional(Util.block(Kwrd.is, Ref.basetypename)), optional(Util.block(Kwrd.with, Mod.typedef_member)))
+        .yields(martha_ast_1.AST.typedef);
+    Mod.typedefs = rule(many(Mod.typedef, optional(Ws.ANY_WS))).yields(martha_ast_1.AST.flatcst);
     return Mod;
 }());
 ditto_1.Ditto.tests.forEach(function (test) {
     var k = test();
     if (JSON.stringify(k.actual) !== JSON.stringify(k.expected)) {
-        console.error("[" + k.source + "]\r\n\tyields error:\r\n\texpected\r\n\t\"" + JSON.stringify(k.expected) + "\"\r\n\tgot\r\n\t\"" + JSON.stringify(k.actual) + "\"");
+        console.error("[" + k.source + "]\r\n\n        \tyields error:\r\n\texpected\r\n\n        \t\"" + JSON.stringify(k.expected) + "\"\r\n\n        \tgot\r\n\n        \t\"" + JSON.stringify(k.actual) + "\"");
     }
 });
 /*
@@ -361,6 +331,5 @@ parse(source)
     }),
     rule("operator:", Ws.IND_WS, /\w+/, /\w+/)
 );
-
 */ 
 //# sourceMappingURL=index.js.map
