@@ -1,0 +1,1 @@
+node_modules\.bin\_mocha -r ts-node/register test/**/*.spec.ts --watch --watch-extensions ts
