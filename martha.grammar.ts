@@ -1,5 +1,5 @@
-import { Ditto, Result, ResultTokens, Input, IRule, IToken, Pattern } from "./ditto";
-const { parse, token, rule, all, many, optional, either, flat } = Ditto;
+import { Tibu, Result, ResultTokens, Input, IRule, IToken, Pattern } from "tibu";
+const { parse, token, rule, all, many, optional, either, flat } = Tibu;
 
 import { AST } from "./martha.ast";
 
@@ -140,7 +140,7 @@ class Util {
         Util.indents.pop();
         return Result.pass(input);
     });
-    static EOF              = rule((input:Input):Result => input.location === input.source.length ? 
+    static EOF              = rule((input:Input):Result => input.location === input.source.length ?
                                     Result.pass(input) : Result.fault(input));
     static block            = (begin:IRule|string|RegExp|IToken, repeat:IRule|string|RegExp|IToken) => rule(
         begin, /[ \t]*:[ \t]*/,

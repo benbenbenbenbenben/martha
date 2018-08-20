@@ -1,13 +1,13 @@
 {
-  "name": "ermtstest",
-  "version": "1.0.0",
+  "name": "martha",
+  "version": "0.0.0",
   "description": "",
   "main": "index.ts",
   "scripts": {
     "test": "mocha -r ts-node/register test/**/*.spec.ts"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Benjamin Babik",
+  "license": "MIT",
   "devDependencies": {
     "@types/chai": "^4.1.4",
     "@types/mocha": "^5.2.5",
@@ -17,6 +17,7 @@
     "typescript": "^3.0.1"
   },
   "dependencies": {
+    "tibu": "0.0.1-alpha1",
     "ts-node-dev": "^1.0.0-pre.26"
   }
 }

@@ -1,5 +1,5 @@
-import { Ditto, Result, ResultTokens, Input, IRule, IToken, Pattern, IRuleAction } from "./ditto";
-const { parse, token, rule, all, many, optional, either, flat } = Ditto;
+import { Tibu, Result, ResultTokens, Input, IRule, IToken, Pattern, IRuleAction } from "tibu";
+const { parse, token, rule, all, many, optional, either, flat } = Tibu;
 
 class AST {
     static trap:IRuleAction = (r, c):any => {

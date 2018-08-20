@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var ditto_1 = require("./ditto");
-var parse = ditto_1.Ditto.parse, token = ditto_1.Ditto.token, rule = ditto_1.Ditto.rule, all = ditto_1.Ditto.all, many = ditto_1.Ditto.many, optional = ditto_1.Ditto.optional, either = ditto_1.Ditto.either, flat = ditto_1.Ditto.flat;
+var tibu_1 = require("tibu");
+var parse = tibu_1.Tibu.parse, token = tibu_1.Tibu.token, rule = tibu_1.Tibu.rule, all = tibu_1.Tibu.all, many = tibu_1.Tibu.many, optional = tibu_1.Tibu.optional, either = tibu_1.Tibu.either, flat = tibu_1.Tibu.flat;
 var martha_ast_1 = require("./martha.ast");
 // helpers
 var manysep = function (sep) {
@@ -126,9 +126,9 @@ var Ref = /** @class */ (function () {
     // members and variables
     Ref._member = token("member", /[a-z_\$\@][a-z0-9\$\@]*/i);
     Ref.varname = token("varname", /[a-z_\$\@][a-z0-9\$\@]*/i);
-    Ref.member = rule(Ref._member, many(Op.dot, Ref._member));
+    Ref.member = rule(Ref._member, many(Op.dot, Ref._member))
+        .yields(martha_ast_1.AST.reference);
     Ref.typename = token("typename", /[a-z_\$\@][a-z0-9\$\@]*/i);
-    Ref.basetypename = token("basetypename", /[a-z_\$\@][\.a-z0-9\$\@]*/i);
     return Ref;
 }());
 exports.Ref = Ref;
@@ -146,9 +146,9 @@ var Ws = /** @class */ (function () {
         var index = input.source.substring(input.location).indexOf(Ws.IND._indent);
         if (index === 0) {
             input.location += Ws.IND._indent.length;
-            return ditto_1.Result.pass(input);
+            return tibu_1.Result.pass(input);
         }
-        return ditto_1.Result.fault(input);
+        return tibu_1.Result.fault(input);
     };
     Ws.IND_WS = rule(Ws.space0ton, optional(Ws.IND));
     Ws.ANY_WS = rule(/[\t\r\n\s]*/);
@@ -166,15 +166,17 @@ var Util = /** @class */ (function () {
         var index = input.source.substring(input.location).indexOf(Util.indents[Util.indents.length - 1]);
         if (index === 0) {
             input.location += Util.indents[Util.indents.length - 1].length;
-            return ditto_1.Result.pass(input);
+            return tibu_1.Result.pass(input);
         }
-        return ditto_1.Result.fault(input);
+        return tibu_1.Result.fault(input);
     });
     Util.popIndent = rule(Ws.newline, function (input) {
         Util.indents.pop();
-        return ditto_1.Result.pass(input);
+        return tibu_1.Result.pass(input);
     });
-    Util.block = function (begin, repeat) { return rule(begin, ":", Util.pushIndent, many(repeat, either(Util.peekIndent, Util.popIndent))); };
+    Util.EOF = rule(function (input) { return input.location === input.source.length ?
+        tibu_1.Result.pass(input) : tibu_1.Result.fault(input); });
+    Util.block = function (begin, repeat) { return rule(begin, /[ \t]*:[ \t]*/, either(all(Util.pushIndent, many(repeat, either(Util.peekIndent, Util.popIndent, Util.EOF))), all(repeat, /\s*/))); };
     return Util;
 }());
 exports.Util = Util;
@@ -277,7 +279,10 @@ var Def = /** @class */ (function () {
     Def.argumentdefs = rule(Def.argumentdef, many(Op.infix_comma, Def.argumentdef));
     Def.methoddef = rule(Util.block(all(optional(many(Kwrd.anyaccess, Ws.space1ton)), optional(Kwrd.static, Ws.space1ton), optional(Kwrd.async, Ws.space1ton), optional(Kwrd.atomic, Ws.space1ton), either(all(Def.returntype, Ws.space1ton, token("name", /w+/)), Kwrd.ctor), optional("(", optional(Def.argumentdefs), ")")), Stmt.statement))
         .yields(martha_ast_1.AST.exp);
-    Def.membernames = rule(Ref.member, many(optional(Op.infix_comma, Ref.member)));
+    Def.membernames = rule(Ref.member, many(optional(Op.infix_comma, Ref.member)))
+        .yields(function (result, cst) {
+        return flat(cst);
+    });
     return Def;
 }());
 exports.Def = Def;
@@ -288,7 +293,9 @@ var Mod = /** @class */ (function () {
         .yields(martha_ast_1.AST.typedef_name);
     Mod.typedef_member = rule(Ref.typename, Op.infix_colon, Def.membernames)
         .yields(martha_ast_1.AST.typedef_member);
-    Mod.typedef = rule(Util.block(Kwrd.type, Mod.typedef_name), optional(Util.block(Kwrd.is, Ref.basetypename)), optional(Util.block(Kwrd.with, Mod.typedef_member)))
+    Mod.typedef_basetype = rule(Ref.typename)
+        .yields(martha_ast_1.AST.typedef_basetype);
+    Mod.typedef = rule(Util.block(Kwrd.type, Mod.typedef_name), optional(Util.block(Kwrd.is, Mod.typedef_basetype)), optional(Util.block(Kwrd.with, Mod.typedef_member)))
         .yields(martha_ast_1.AST.typedef);
     Mod.typedefs = rule(many(Mod.typedef, optional(Ws.ANY_WS))).yields(martha_ast_1.AST.flatcst);
     return Mod;

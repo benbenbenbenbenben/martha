@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var ditto_1 = require("./ditto");
-var parse = ditto_1.Ditto.parse, token = ditto_1.Ditto.token, rule = ditto_1.Ditto.rule, all = ditto_1.Ditto.all, many = ditto_1.Ditto.many, optional = ditto_1.Ditto.optional, either = ditto_1.Ditto.either, flat = ditto_1.Ditto.flat;
+var tibu_1 = require("tibu");
+var parse = tibu_1.Tibu.parse, token = tibu_1.Tibu.token, rule = tibu_1.Tibu.rule, all = tibu_1.Tibu.all, many = tibu_1.Tibu.many, optional = tibu_1.Tibu.optional, either = tibu_1.Tibu.either, flat = tibu_1.Tibu.flat;
 var AST = /** @class */ (function () {
     function AST() {
     }
@@ -12,17 +12,21 @@ var AST = /** @class */ (function () {
         return { op: "postfix", parameters: [result.tokens[0].name] };
     };
     AST.typedef = function (result, cst) {
-        var types = cst[0][0][0][0].typenames.map(function (name) {
+        var types = flat(cst)
+            .filter(function (x) { return x; })
+            .filter(function (x) { return x.name; })
+            .map(function (name) {
             var type = {
-                name: name
+                name: name.name[0]
             };
-            if (result.one("basetypename")) {
-                type.basetype = result.one("basetypename");
-            }
-            if (cst[1] && cst[1][0]) {
-                var f = flat(cst);
-                type.members = f.slice(1).filter(function (t) { return t && t.member; });
-            }
+            flat(cst).filter(function (x) { return x; }).forEach(function (part) {
+                if (part.basetype) {
+                    type.basetype = part.basetype[0];
+                }
+                if (part.members) {
+                    type.members = type.members ? type.members.concat(part.members) : part.members.slice();
+                }
+            });
             return type;
         });
         return {
@@ -30,11 +34,26 @@ var AST = /** @class */ (function () {
         };
     };
     AST.typedef_member = function (result, cst) {
-        return { member: result.get("member").map(function (name) { return { name: name, type: result.one("typename") }; }) };
+        return {
+            members: flat(cst)
+                .filter(function (x) { return x; })
+                .filter(function (x) { return x.reference; })
+                .map(function (x) {
+                return {
+                    type: result.one("typename"),
+                    name: x.reference
+                };
+            })
+        };
     };
     AST.typedef_name = function (result, cst) {
         return {
-            typenames: result.get("typename")
+            name: result.get("typename")
+        };
+    };
+    AST.typedef_basetype = function (result, cst) {
+        return {
+            basetype: result.get("typename")
         };
     };
     AST.atomparen = function (result, cst) {
@@ -91,6 +110,9 @@ var AST = /** @class */ (function () {
     };
     AST.flatcst = function (result, cst) {
         return flat(cst);
+    };
+    AST.reference = function (result, cst) {
+        return { reference: result.get("member").join(".") };
     };
     AST.trap = function (r, c) {
         console.log(JSON.stringify(r, null, 2));
