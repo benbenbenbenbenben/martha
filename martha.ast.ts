@@ -1,5 +1,10 @@
 import { Tibu, Result, ResultTokens, Input, IRule, IToken, Pattern, IRuleAction } from "tibu";
-const { parse, token, rule, all, many, optional, either, flat } = Tibu;
+const { parse, token, rule, all, many, optional, either } = Tibu;
+
+const flat = (arr:any[]): any[] => {
+    return arr.reduce((acc, val) => Array.isArray(val) ?
+         acc.concat(flat(val)) : acc.concat(val), []);
+}
 
 class AST {
     static trap:IRuleAction = (r, c):any => {
@@ -15,6 +20,46 @@ class AST {
 
     static postfixop(result:ResultTokens, cst:any):any {
         return { op: "postfix", parameters: [result.tokens[0].name] };
+    }
+
+    static argumentsspec(result:ResultTokens, cst:any):any {
+        let modcst = flat(cst)
+        if (result.tokens.length) {
+            if (result.one("dot")) {
+                if (modcst[0].reference) {
+                    modcst[0].reference = `this.${modcst[0].reference}`
+                } // TODO: else error case
+            } else {
+                modcst.unshift({ op: result.tokens[0].name })
+                modcst.unshift({ reference:"this" })
+            }
+        }
+        return { op: "argspec", parameters: [...modcst] }
+    }
+
+    static argumentdef(result:ResultTokens, cst:any):any {
+        return { 
+            op: "argdef", 
+            parameters: cst 
+                ? [result.one("varname"), result.one("typename"), ...flat(cst)] 
+                : [result.one("varname"), result.one("typename")] 
+        }
+    }
+
+    static argumentdefs(result:ResultTokens, cst:any):any {
+        return {
+            op: "argdefs",
+            parameters: flat(cst)
+        }
+    }
+
+    static returndef(result:ResultTokens, cst:any):any {
+        return {
+            op: "returndef",
+            parameters: cst 
+                ? [ result.one("typename"), ...flat(cst) ] 
+                : [ result.one("typename") ]
+        }
     }
 
     static typedef(result:ResultTokens, cst:any):any {
@@ -110,10 +155,7 @@ class AST {
     }
 
     static atommember(result:ResultTokens, cst:any):any {
-        return {
-            op: "reference",
-            parameters: result.get("member")
-        };
+        return flat(cst);
     }
 
     static atom(result:ResultTokens, cst:any):any {

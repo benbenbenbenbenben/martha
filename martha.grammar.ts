@@ -1,8 +1,12 @@
 import { Tibu, Result, ResultTokens, Input, IRule, IToken, Pattern } from "tibu";
-const { parse, token, rule, all, many, optional, either, flat } = Tibu;
+const { parse, token, rule, all, many, optional, either } = Tibu;
 
 import { AST } from "./martha.ast";
 
+const flat = (arr:any[]): any[] => {
+    return arr.reduce((acc, val) => Array.isArray(val) ?
+         acc.concat(flat(val)) : acc.concat(val), []);
+}
 
 // helpers
 const manysep:any = (sep:Pattern, ...pattern:Pattern[]):(input:Input) => Result => {
@@ -42,6 +46,9 @@ class Op {
     static plusplus         = token("plusplus", "++");
     static minusminus       = token("minusminus", "--");
 
+    /**
+     * token producer: binary operators
+     */
     static get anybinary():any {
         return either(this.assign, this.pluseq, this.lt, this.lte, this.gt, this.gte,
             this.dot, this.plus, this.minus, this.div, this.mult, this.mod);
@@ -154,65 +161,21 @@ class Util {
 class Exp {
     static atomparen                = rule("(", optional(() => Exp.exp), ")")
     .yields(AST.atomparen)
-    .passes("()", {op:"parenthesis"})
-    .passes("(1)", {op:"parenthesis", parameters:[{op:"literal",parameters:["integer","1"]}]})
     ;
     static atomcall                 = rule(Ref.member, "(", optional(() => Exp.exp, many(Op.infix_comma, () => Exp.exp)), ")")
     .yields(AST.atomcall)
-    .passes("k()", { op:"call", parameters:[["k"]] })
-    .passes("k.q()", { op:"call", parameters:[["k","q"]] })
-    .passes("k.q(1)", { op:"call", parameters:[["k","q"], {op:"literal", parameters:["integer","1"]}] })
-    .passes("k([1,2,3],[a.aa,b,c])", {
-        op:"call", parameters:[
-            ["k"], {
-                op:"arrayliteral",
-                parameters:[
-                    {op:"literal", parameters:["integer","1"]},
-                    {op:"literal", parameters:["integer","2"]},
-                    {op:"literal", parameters:["integer","3"]}
-                ]
-            },{
-                op:"arrayliteral",
-                parameters:[
-                    {op:"reference", parameters:["a","aa"]},
-                    {op:"reference", parameters:["b"]},
-                    {op:"reference", parameters:["c"]}
-                ]
-            }
-        ]
-    })
     ;
     static atomliteral          = rule(Val.anyliteral)
     .yields(AST.atomliteral)
     ;
     static atomarrliteral       = rule(Op.lsquare, optional(() => Exp.exp, (many(Op.infix_comma, () => Exp.exp))), Op.rsquare)
     .yields(AST.atomarrliteral)
-    .passes("[]", { op:"arrayliteral", parameters:[] })
-    .passes("[1]", { op:"arrayliteral", parameters:[{op:"literal",parameters:["integer","1"]}] })
-    .passes("[[]]", { op:"arrayliteral", parameters:[{op:"arrayliteral", parameters:[]}] })
-    .passes("[k()]", { op:"arrayliteral", parameters:[{op:"call", parameters:[["k"]]}] })
-    .passes("[1,2,3]", { op:"arrayliteral", parameters:[
-        {op:"literal",parameters:["integer","1"]},
-        {op:"literal",parameters:["integer","2"]},
-        {op:"literal",parameters:["integer","3"]}
-    ]})
     ;
     static atomobjliteral       = rule(Op.lcurly,
         manysep(Op.infix_comma, either(all(Ref.member, Op.assign, () => Exp.exp), Ref.member)),
         Op.rcurly
     )
     .yields(AST.atomobjliteral)
-    .passes("{}",{op:"literal",parameters:["object"]})
-    .passes("{a=2}",{op:"literal",parameters:["object",{
-            op:"assign",parameters:["a",{op:"literal",parameters:["integer","2"]}]
-        }
-    ]})
-    .passes("{a=2,b=0}",{op:"literal",parameters:["object",{
-            op:"assign",parameters:["a",{op:"literal",parameters:["integer","2"]}]
-        },{
-            op:"assign",parameters:["b",{op:"literal",parameters:["integer","0"]}]
-        }
-    ]})
     ;
     static atomlambdaliteral    = rule(Util.block(
         either(
@@ -222,6 +185,9 @@ class Exp {
     static atommember           = rule(Ref.member)
     .yields(AST.atommember)
     ;
+    /**
+     * cst producer
+     */
     static atom                 = rule(
                                     optional(rule(Op.anyprefix).yields(AST.prefixop)),
                                     either( Exp.atomliteral,
@@ -233,23 +199,17 @@ class Exp {
                                             Exp.atommember),
                                     optional(rule(Op.anypostfix).yields(AST.postfixop)))
     .yields(AST.atom)
-    .passes("a++", [{op:"reference",parameters:["a"]},{op:"postfix",parameters:["plusplus"]}])
-    .passes("++a", [{op:"prefix",parameters:["plusplus"]},{op:"reference",parameters:["a"]}])
     ;
+    /**
+     * cst producer
+     */
     static exp                  = rule(Exp.atom, many(/ */, Op.anybinary, / */, Exp.atom))
     .yields(AST.exp)
-    .passes("a + b + c", [
-        {"op":"reference","parameters":["a"]},{"op":"plus"},
-        {"op":"reference","parameters":["b"]},{"op":"plus"},
-        {"op":"reference","parameters":["c"]}])
     ;
 }
 
 class Stmt {
-    static stmt_expression = rule(Exp.exp)
-        .yields((r) => {
-            return r.tokens;
-        });
+    static stmt_expression = rule(Exp.exp);
     static statement        = rule(either(
         Stmt.stmt_expression,
         // z Stmt.stmt_switch,
@@ -262,17 +222,24 @@ class Stmt {
 }
 
 class Def {
-    static specpredicate = rule(
-        Op.dot, Ref.member, Op.anybinary, either(Val.anyliteral, Ref.member),
-        Op.dot, Ref.member,
-        Op.anybinary, either(Val.anyliteral, Ref.member)
+    static specpredicate = rule(either(
+        all(Op.anybinary, Ws.ANY_WS, Stmt.stmt_expression),
+        all(Ref.member)
+    )
         // op value (and op value etc...)
         // .member op value...
         // predicate function name (where predicate function takes form: bool f(type))
-    );
-    static argumentspec = rule("{", Def.specpredicate, "}");
-    static argumentdef = rule(Ref.varname, ":", Ref.typename, optional(Def.argumentspec));
-    static returntype = rule(Ref.typename, optional(Def.argumentspec));
+    )
+    ;
+    static argumentspec = rule("{", Def.specpredicate, "}")
+    .yields(AST.argumentsspec)
+    ;
+    static argumentdef = rule(Ref.varname, ":", Ref.typename, optional(Def.argumentspec))
+    .yields(AST.argumentdef)
+    ;
+    static returndef = rule(Ref.typename, optional(Def.argumentspec))
+    .yields(AST.returndef)
+    ;
     static argumentdefs = rule(Def.argumentdef, many(Op.infix_comma, Def.argumentdef));
     static methoddef = rule(
         Util.block(all(
@@ -281,7 +248,7 @@ class Def {
             optional(Kwrd.async, Ws.space1ton),
             optional(Kwrd.atomic, Ws.space1ton),
             either(
-                all(Def.returntype, Ws.space1ton, token("name", /w+/)),
+                all(Def.returndef, Ws.space1ton, token("name", /w+/)),
                 Kwrd.ctor
             ),
             optional("(",
@@ -309,7 +276,8 @@ class Mod {
     static typedef = rule(
         Util.block(Kwrd.type, Mod.typedef_name),
         optional(Util.block(Kwrd.is, Mod.typedef_basetype)),
-        optional(Util.block(Kwrd.with, Mod.typedef_member))
+        optional(Util.block(Kwrd.with, Mod.typedef_member)),
+        many(Def.methoddef)
     )
     .yields(AST.typedef)
     ;
