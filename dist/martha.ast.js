@@ -1,30 +1,92 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var tibu_1 = require("tibu");
-var parse = tibu_1.Tibu.parse, token = tibu_1.Tibu.token, rule = tibu_1.Tibu.rule, all = tibu_1.Tibu.all, many = tibu_1.Tibu.many, optional = tibu_1.Tibu.optional, either = tibu_1.Tibu.either, flat = tibu_1.Tibu.flat;
-var AST = /** @class */ (function () {
-    function AST() {
+const tibu_1 = require("tibu");
+const { parse, token, rule, all, many, optional, either } = tibu_1.Tibu;
+const martha_emit_1 = require("./martha.emit");
+const emit = martha_emit_1.Emit.Emit;
+const flat = (arr) => {
+    return arr.reduce((acc, val) => Array.isArray(val) ?
+        acc.concat(flat(val)) : acc.concat(val), []);
+};
+class AST {
+    static anyaccess(result, cst) {
+        return emit(martha_emit_1.MethodAccess, {
+            ispublic: !!result.one("public"),
+            isprivate: !!result.one("private"),
+            isinternal: !!result.one("internal"),
+            isprotected: !!result.one("protected")
+        });
     }
-    AST.prefixop = function (result, cst) {
+    static prefixop(result, cst) {
         return { op: "prefix", parameters: [result.tokens[0].name] };
-    };
-    AST.postfixop = function (result, cst) {
+    }
+    static postfixop(result, cst) {
         return { op: "postfix", parameters: [result.tokens[0].name] };
-    };
-    AST.typedef = function (result, cst) {
-        var types = flat(cst)
-            .filter(function (x) { return x; })
-            .filter(function (x) { return x.name; })
-            .map(function (name) {
-            var type = {
+    }
+    static argumentsspec(result, cst) {
+        let modcst = flat(cst);
+        if (result.tokens.length) {
+            if (result.one("dot")) {
+                if (modcst[0] instanceof martha_emit_1.Reference) {
+                    modcst[0].name = `this.${modcst[0].name}`;
+                } // TODO: else error case
+            }
+            else {
+                modcst.unshift({ op: result.tokens[0].name });
+                modcst.unshift(emit(martha_emit_1.Reference, { name: "this" }));
+            }
+        }
+        return { op: "argspec", parameters: [...modcst] };
+    }
+    static argumentdef(result, cst) {
+        return {
+            op: "argdef",
+            type: result.one("typename"),
+            name: result.one("varname"),
+            spec: cst ? flat(cst) : [],
+        };
+    }
+    static argumentdefs(result, cst) {
+        return {
+            op: "argdefs",
+            parameters: flat(cst)
+        };
+    }
+    static returndef(result, cst) {
+        return {
+            op: "returndef",
+            parameters: cst
+                ? [result.one("typename"), ...flat(cst)]
+                : [result.one("typename")]
+        };
+    }
+    static methoddef(result, cst) {
+        return {
+            def: "method",
+            name: result.one("ctor") || result.one("name"),
+            access: cst && flat(cst).find(x => x instanceof martha_emit_1.MethodAccess),
+            async: result.get("async") !== null,
+            atomic: result.get("atomic") !== null,
+            critical: result.get("critical") !== null,
+            arguments: cst && flat(flat(cst).filter((x) => x.op == "argdefs").map((x) => x.parameters)),
+            return: cst && flat(cst).find((x) => x.op === "returndef"),
+        };
+    }
+    static typedef(result, cst) {
+        let types = flat(cst)
+            .filter(x => x)
+            .filter(x => x.name)
+            .map((name) => {
+            let type = {
                 name: name.name[0]
             };
-            flat(cst).filter(function (x) { return x; }).forEach(function (part) {
+            flat(cst).filter(x => x).forEach(part => {
                 if (part.basetype) {
                     type.basetype = part.basetype[0];
                 }
                 if (part.members) {
-                    type.members = type.members ? type.members.concat(part.members) : part.members.slice();
+                    type.members = type.members ? [...type.members, ...part.members]
+                        : [...part.members];
                 }
             });
             return type;
@@ -32,95 +94,94 @@ var AST = /** @class */ (function () {
         return {
             types: flat(types)
         };
-    };
-    AST.typedef_member = function (result, cst) {
+    }
+    static typedef_member(result, cst) {
         return {
             members: flat(cst)
-                .filter(function (x) { return x; })
-                .filter(function (x) { return x.reference; })
-                .map(function (x) {
+                .filter(x => x)
+                .filter(x => x.reference)
+                .map(x => {
                 return {
                     type: result.one("typename"),
                     name: x.reference
                 };
             })
         };
-    };
-    AST.typedef_name = function (result, cst) {
+    }
+    static typedef_name(result, cst) {
         return {
             name: result.get("typename")
         };
-    };
-    AST.typedef_basetype = function (result, cst) {
+    }
+    static typedef_basetype(result, cst) {
         return {
             basetype: result.get("typename")
         };
-    };
-    AST.atomparen = function (result, cst) {
+    }
+    static atomparen(result, cst) {
         return {
             op: "parenthesis",
             parameters: cst ? flat(cst) : undefined
         };
-    };
-    AST.atomcall = function (result, cst) {
+    }
+    static atomcall(result, cst) {
         return {
             op: "call",
             parameters: cst === undefined ? [
                 result.get("member")
             ] : [
-                result.get("member")
-            ].concat(flat(cst))
+                result.get("member"),
+                ...flat(cst)
+            ]
         };
-    };
-    AST.atomliteral = function (result, cst) {
-        return {
-            op: "literal",
-            parameters: [result.tokens[0].name, result.tokens[0].result.value]
-        };
-    };
-    AST.atomarrliteral = function (result, cst) {
+    }
+    static atomliteral(result, cst) {
+        return emit(martha_emit_1.Literal, {
+            type: result.tokens[0].name,
+            value: result.tokens[0].result.value
+        });
+    }
+    static atomarrliteral(result, cst) {
         return {
             op: "arrayliteral",
             parameters: cst === undefined ? [] : flat(cst)
         };
-    };
-    AST.atomobjliteral = function (result, cst) {
+    }
+    static atomobjliteral(result, cst) {
         return {
             op: "literal",
             parameters: result.get("member")
-                ? ["object"].concat(result.get("member").map(function (m, i) { return { op: "assign", parameters: [m].concat(flat(cst)[i]) }; })) : ["object"]
+                ? ["object", ...result.get("member").map((m, i) => { return { op: "assign", parameters: [m, ...flat(cst)[i]] }; })]
+                : ["object"]
         };
-    };
-    AST.atommember = function (result, cst) {
-        return {
-            op: "reference",
-            parameters: result.get("member")
-        };
-    };
-    AST.atom = function (result, cst) {
+    }
+    static atommember(result, cst) {
         return flat(cst);
-    };
-    AST.exp = function (result, cst) {
+    }
+    static atom(result, cst) {
+        return flat(cst);
+    }
+    static exp(result, cst) {
+        let output;
         if (result.tokens.length) {
-            var ext = result.tokens.map(function (t, i) { return [{ op: t.name }, flat(cst)[i + 1]]; });
-            return flat((_a = [cst[0]]).concat.apply(_a, ext));
+            const ext = result.tokens.map((t, i) => [{ op: t.name }, flat(cst)[i + 1]]);
+            output = flat([cst[0]].concat(...ext));
         }
+        else {
+            output = flat(cst);
+        }
+        if (output.length > 2) {
+        }
+        return output;
+    }
+    static flatcst(result, cst) {
         return flat(cst);
-        var _a;
-    };
-    AST.flatcst = function (result, cst) {
-        return flat(cst);
-    };
-    AST.reference = function (result, cst) {
-        return { reference: result.get("member").join(".") };
-    };
-    AST.trap = function (r, c) {
-        console.log(JSON.stringify(r, null, 2));
-        console.log(JSON.stringify(c, null, 2));
-        // tslint:disable-next-line:no-debugger
-        debugger;
-    };
-    return AST;
-}());
+    }
+    static reference(result, cst) {
+        return emit(martha_emit_1.Reference, {
+            name: result.get("member").join(".")
+        });
+    }
+}
 exports.AST = AST;
 //# sourceMappingURL=martha.ast.js.map

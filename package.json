@@ -17,7 +17,7 @@
     "typescript": "^3.0.1"
   },
   "dependencies": {
-    "tibu": "0.0.1-alpha1",
+    "tibu": "file:../tibu",
     "ts-node-dev": "^1.0.0-pre.26"
   }
 }

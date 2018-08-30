@@ -18,8 +18,8 @@ constructor:
     call(a(b(c(10, 90))))
     z = g : g ** g
     j = u * 4 for u in 1..100
-atomic void record(items{.len > 0}:Array[], f{> 0}:Int, flag:bool, ref z:Vector<string>)
+atomic void record(Array[]:items{.len > 0}, int:f{> 0}, bool:flag, ref Vector<string>:s)
     ledger.process(sum)
     total += f
-atomic int{> 0} send(to:Address, amount:int{> 0})
+atomic int{> 0} send(Address:to, int:amount{> 0})
     do(bad(stuff[0].with("stuff".length)))
