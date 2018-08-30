@@ -48,6 +48,10 @@ class Ctx {
             return Result.fault(input)
         }
     }
+    static clear(input:Input): Result {
+        Ctx.contexts = []
+        return Result.pass(input)
+    }
 }
 
 // const op
@@ -163,7 +167,7 @@ class Op {
         return [
             // lparen,rparen,lsquare,rsquare
             Op.arrow,
-            Op.dot,
+            //Op.dot,
             Op.conditionaldot,
             Op.plusplus,
             Op.minusminus,
@@ -181,7 +185,7 @@ class Op {
             Op.exc,
             Op.tilde,
             Op.splat,
-            Op.dot,
+           // Op.dot,
         ]
     }
     /**
@@ -189,6 +193,7 @@ class Op {
      */
     static get sorted2_binary(): IToken[] {
         return [
+            Op.dot,
             Op.mult,
             Op.power,
             Op.div,
@@ -400,9 +405,10 @@ class Exp {
         Exp.atommember,        
     ))
     static atom                 = rule(
-                                    either(                                             
+                                    either(   
                                             //rule("return", many(Ws.space0ton, Exp.subatom)),
-                                            rule(Exp.subatom, many(Ws.space0ton, Exp.subatom))
+                                            rule(Exp.subatom, many(Ws.space0ton, Exp.subatom)),
+                                            rule(Ctx.peek("spec")).yields(AST.thisref),
                                             //rule(Exp.atommember, Ws.space0ton, "(", () => Exp.exprAinfix, ")").yields(AST.callnoparen),                                            
                                             
                                            // Exp.atomcall,
@@ -419,12 +425,7 @@ class Exp {
      * cst producer
      */    
     static expr0postfix         = rule(
-                                    either(
-                                        Exp.atom, 
-                                        rule(Ctx.peek("spec")).yields(AST.thisref)
-                                    ), 
-                                    optional(Exp.atom),
-                                    optional(either(...Op.sorted0_postfix))
+                                    Exp.atom, many(either(...Op.sorted0_postfix))
                                 ).yields(AST.postfixexpr)
     static expr1prefix          = rule(
                                     many(either(...Op.sorted1_prefix)), Exp.expr0postfix
@@ -462,7 +463,7 @@ class Stmt {
            // rule(either(...Mcro.macros), Ws.space0ton, () => Stmt.statement).yields(AST.call),
            // rule(Exp.exprAinfix, "(", () => Stmt.statement, ")").yields(AST.calluser),
            // rule(Exp.exprAinfix, Ws.space1ton, () => Stmt.statement).yields(AST.calluser),
-            many(Exp.exprAinfix)
+            many(Exp.exprAinfix, optional(Ctx.clear))
         )
     )
     .yields(AST.statement);
@@ -481,10 +482,7 @@ class Stmt {
 
 class Def {
     static argumentspec = rule(
-            "{", Ctx.push("spec"), either(
-                Stmt.statement,
-                Ws.lr0ton(Ref.member),
-            ),  Ctx.pop("spec"), "}"
+            "{", Ctx.push("spec"), Stmt.statement, "}"//, Ctx.pop("spec")
         )
     .yields(AST.argumentsspec)
     ;

@@ -3,7 +3,7 @@ import "mocha";
 import { AST } from "../martha.ast";
 import { Tibu, ResultTokens, Result } from "tibu";
 import { Mod, Def, Exp, Stmt } from "../martha.grammar";
-import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef } from "../martha.emit";
+import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef, Dot } from "../martha.emit";
 const { parse, rule, either, many, all, optional } = Tibu;
 
 const flat = (arr:any[]): any[] => {
@@ -25,11 +25,11 @@ describe("Def", () => {
             let input = "{.x}"
             // output
             let output = (r:ResultTokens, c:any) => {
+                console.log(c[0][0])
                 expect(flat(c)).to.deep.eq([
-                    { statement: 
-                        Emit.Emit(Dot_Prefix, { value:
-                            Emit.Emit(Reference, {name:"x"})
-                        })
+                    { statement: [
+                            { name: "this.x" }
+                        ]
                     }
                  ])
             }
@@ -42,9 +42,7 @@ describe("Def", () => {
              let output = (r:ResultTokens, c:any) => {
                  expect(flat(c)).to.deep.eq([
                      Emit.Emit(Statement, { statement: 
-                        Emit.Emit(Dot_Prefix, { value:
-                            Emit.Emit<Reference>(Reference, {name:"x.y"})
-                        })
+                        [{ name: "this.x.y" }]
                     })
                  ])
              }
@@ -56,11 +54,11 @@ describe("Def", () => {
              // output
              let output = (r:ResultTokens, c:any) => {
                  expect(flat(c)).to.deep.eq([
-                    Emit.Emit(Statement, { statement:
+                    Emit.Emit(Statement, { statement:[
                             Emit.Emit(Gt, {
                                 left: Emit.Emit<Reference>(Reference, {name:"this.x"}),
                                 right: Emit.Emit<Reference>(Reference, {name:"y"}),
-                            })
+                            })]
                         })
                  ])
              }
@@ -72,15 +70,13 @@ describe("Def", () => {
             // output
             let output = (r:ResultTokens, c:any) => {
                 expect(flat(c)).to.deep.eq([
-                    { statement: 
+                    { statement: [
                             Emit.Emit(Gt, {
-                                left: Emit.Emit(Dot_Prefix, { value:
-                                        Emit.Emit(Reference, {name:"x"})
-                                    }
-                                ),
+                                left: Emit.Emit(Reference, {name:"this.x"}),
                                 right: Emit.Emit(Literal, {type:"integer", value:"10"}),
-                            })      
-                        }
+                            })  
+                        ]    
+                    }
                  ])
             }
             parse(input)(rule(Def.argumentspec).yields(output))
@@ -92,7 +88,7 @@ describe("Def", () => {
             let output = (r:ResultTokens, c:any) => {
                 expect(flat(c)).to.deep.eq([
                     { statement:
-                        Emit.Emit(Reference, {name:"func"})
+                        [Emit.Emit(Reference, {name:"func"})]
                     }
                 ])
                 expect(r.tokens.length).to.eq(0)
@@ -130,12 +126,8 @@ describe("Def", () => {
                         name: "name",
                         spec: [
                             Emit.Emit(Gt, { 
-                                left:
-                                Emit.Emit(Dot_Prefix, { value: 
-                                    Emit.Emit<Reference>(Reference, {name:"x"}),
-                                }),
-                                right:
-                                Emit.Emit<Literal>(Literal, {type:"integer", value:"10"})
+                                left: Emit.Emit<Reference>(Reference, {name:"this.x"}),
+                                right: Emit.Emit<Literal>(Literal, {type:"integer", value:"10"})
                             })
                         ]
                     }
@@ -271,11 +263,9 @@ describe("Def", () => {
                         { type: "P", name: "j", spec: [
                             Emit.Emit(Lt, { 
                                 left:
-                                Emit.Emit(Dot_Prefix, { value:
-                                    Emit.Emit(Reference, {name:"len"}),
-                                }),
+                                    Emit.Emit(Reference, {name:"this.len"}),
                                 right: 
-                                Emit.Emit(Reference, {name:"i"}),
+                                    Emit.Emit(Reference, {name:"i"}),
                             })
                         ]},
                     ],
@@ -320,7 +310,7 @@ describe("Def", () => {
                         ],
                         body: [
                             {
-                              "statement": {
+                              "statement": [{
                                 "left": {
                                   "left": {
                                     "apply": {
@@ -338,7 +328,7 @@ describe("Def", () => {
                                   "type": "integer",
                                   "value": "1"
                                 }
-                              }
+                              }]
                             }
                           ],
                         return: Emit.Emit(ReturnDef, {
@@ -370,7 +360,7 @@ describe('Exp', () => {
             // output
             let output = (r:ResultTokens, c:any) => {
                 expect(flat(c)).to.deep.eq([
-                    { statement: 
+                    { statement: [
                         Emit.Emit(Minus, {
                             left: Emit.Emit(Plus, {
                                 left: Emit.Emit(Reference, {name:"x"}),
@@ -384,7 +374,8 @@ describe('Exp', () => {
                             }),
                             right: Emit.Emit(Reference, {name:"q"})
                         })
-                    }])
+                    ]}
+                ])
                 expect(r.tokens.length).to.eq(0)
                 proc = true
             }
@@ -399,11 +390,11 @@ describe('Exp', () => {
             let output = (r:ResultTokens, c:any) => {
                 expect(flat(c)[0]).to.deep.eq(
                     { statement: 
-                        Emit.Emit<Assignment>(Assignment, {
+                        [Emit.Emit<Assignment>(Assignment, {
                             left: Emit.Emit<Reference>(Reference, {name:"a"}),
                             right: Emit.Emit<Literal>(Literal, {type:"integer",value:"10"}),
                         
-                        })
+                        })]
                     }
                 ).and.instanceof(Statement)
                 expect(r.tokens.length).to.eq(0)
@@ -418,7 +409,7 @@ describe('Exp', () => {
             let proc = false
             // output
             let output = (r:ResultTokens, c:any) => {
-                expect(flat(c)).to.deep.eq([{statement:{
+                expect(flat(c)).to.deep.eq([{statement:[{
                     left: { name: "a" },
                     right: {
                         left: {
@@ -439,7 +430,7 @@ describe('Exp', () => {
                             ]
                         }
                     }
-                }}])
+                }]}])
                 proc = true
             }
             parse(input)(rule(Stmt.statement).yields(output))

@@ -19,6 +19,7 @@ export class Binary {
     right!: any
 }
 
+export class Dot extends Binary {}
 export class Mult extends Binary {}
 export class Power extends Binary {}
 export class Div extends Binary {}
@@ -77,7 +78,6 @@ export class UnaryPostfix {
 }
 
 export class Arrow extends UnaryPostfix {}
-export class Dot extends UnaryPostfix {}
 export class ConditionalDot extends UnaryPostfix {}
 export class PlusPlus_Postfix extends UnaryPostfix {}
 export class MinusMinus_Postfix extends UnaryPostfix {}

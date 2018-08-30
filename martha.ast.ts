@@ -51,7 +51,7 @@ class AST {
         return emit(ArgumentDef, {
                 type: result.one("typename"),
                 name: result.one("varname"),
-                spec: cst ? flat(cst).filter(isa(Statement)).map(x => x.statement) : [],
+                spec: cst ? flat(flat(cst).filter(isa(Statement)).map(x => x.statement)) : [],
             })
     }
 
@@ -65,7 +65,8 @@ class AST {
     static returndef(result:ResultTokens, cst:any):ReturnDef {
         return emit(ReturnDef, { 
             type: result.one("typename"),
-            spec: cst ? flat(cst).filter(isa(Statement)).map(x => x.statement) : [] })
+            spec: cst ? flat(flat(cst).filter(isa(Statement)).map(x => x.statement)) : [] 
+        })
     }
 
     static methoddef(result:ResultTokens, cst:any):MethodDef {
@@ -267,6 +268,9 @@ class AST {
         return flat(cst).slice(1).reduce(
             (left, right) => {
                 switch(result.tokens[0].name) {
+                    case Op.dot.__token__: return (isa(Reference)(left) && isa(Reference)(right))
+                        ? emit(Reference, { name: `${left.name}.${right.name}`}) 
+                        : emit(Dot, { left, right })
                     case Op.mult.__token__: return emit(Mult, { left, right })
                     case Op.power.__token__: return emit(Power, { left, right })
                     case Op.div.__token__: return emit(Div, { left, right })
@@ -304,7 +308,7 @@ class AST {
         )
     }
 
-    static postfixexpr(result:ResultTokens, cst:any):any {       
+    static postfixexpr(result:ResultTokens, cst:any):any {    
         if (result.tokens.length) {
             switch(result.tokens[0].name) {
                 case Op.arrow.__token__: return emit(Arrow, { value: flat(cst)[0]})
@@ -350,7 +354,7 @@ class AST {
         if (cst === undefined) {
             return
         }
-        return emit(Statement, { statement: flat(cst)[0] })
+        return emit(Statement, { statement: flat(cst) })
     }
 }
 
