@@ -1,15 +1,46 @@
 import { expect } from "chai";
 import "mocha";
-import { AST } from "../martha.ast";
+import { AST } from "../src/martha.ast";
 import { Tibu, ResultTokens, Result } from "tibu";
-import { Mod, Def, Exp, Stmt } from "../martha.grammar";
-import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef, Dot } from "../martha.emit";
+import { Def, Exp, Stmt } from "../src/martha.grammar";
+import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef, Dot } from "../src/martha.emit";
 const { parse, rule, either, many, all, optional } = Tibu;
 
 const flat = (arr:any[]): any[] => {
     return arr.reduce((acc, val) => Array.isArray(val) ?
          acc.concat(flat(val)) : acc.concat(val), []);
 }
+
+describe("types", () => {
+     // type name
+     describe("basic types", () => {
+        it("should parse type name", () => {
+            expect(Tibu.parse(`Foo`)(Def.typedef_name)).to.deep.eq([{name:["Foo"]}]);
+        });
+        it("should parse a base type name", () => {
+            expect(Tibu.parse(`Bar`)(Def.typedef_basetype)).to.deep.eq([{basetype:["Bar"]}]);
+        });
+        it("should parse a type member", () => {
+            expect(Tibu.parse(`Type: Member`)(Def.typedef_member)).to.deep.eq([{members:[{type:"Type",name:"Member"}]}]);
+        });
+        it("should parse a type with a base type", () => {
+            expect(Tibu.parse(`type: Foo is: Bar`)(Def.typedef)).to.deep.eq([[{name:"Foo",basetype:"Bar"}]]);
+        });
+        it("should parse a basic type", () => {
+            expect(Tibu.parse(`type: Foo`)(Def.typedef)).to.deep.eq([[ { name: "Foo" } ]]);
+        });
+        it("should parse a basic type with a member variable", () => {
+            expect(Tibu.parse(`type: Foo is: Bar with:\n    Party: this`)(Def.typedef))
+            .to.deep.eq([[{name:"Foo",basetype: "Bar",members:[{type:"Party",name:"this"}]}]]);
+        });
+        it("should parse a 1+n type with member variables", () => {
+            expect(Tibu.parse(`type: Foo, Bar is: Base with:\n    Addr: addr0, addr1`)(Def.typedefs)).to.deep.eq(
+                [[
+                    {name:"Foo", basetype:"Base", members:[{type:"Addr",name:"addr0"},{type:"Addr",name:"addr1"}]}
+                ]]
+            );});
+        });
+})
 
 describe("Def", () => {
     /**
@@ -349,6 +380,28 @@ describe("Def", () => {
             expect(proc).to.be.eq(true)
         })
     })
+    describe("macrodef", () => {
+        it('accepts macro: return when: return $subatom use: Emit.Return($subatom)', () => {
+            // input
+            let input = 'macro: return\nwhen: return $subatom\nuse: Emit.Return($subatom)'
+            let proc = false
+            // output
+            let output = (r:ResultTokens, c:any) => {
+                expect(flat(c)).to.deep.eq([{
+                    name: "return",
+                    when: [{statement:[
+                        { apply: { name: "$subatom" }, to: { name: "return" } }
+                    ]}],
+                    use: [{statement:[
+                        { apply: { parenthesis: [ { name: "$subatom" } ] }, to: { name: "Emit.Return" } }
+                    ]}]
+                }])
+                proc = true
+            }
+            parse(input)(rule(Def.macrodef).yields(output))
+            expect(proc).to.be.eq(true)
+        })
+    })
 })
 
 describe('Exp', () => {
@@ -442,9 +495,9 @@ describe('Exp', () => {
             let proc = false
             // output
             let output = (r:ResultTokens, c:any) => {
-                expect(flat(c)).to.deep.eq([{
-                    
-                }])
+                expect(flat(c)).to.deep.eq([
+                    { statement: [ { apply: { name: 'a' }, to: { name: 'return' } } ] }
+                ])
                 proc = true
             }
             parse(input)(rule(Stmt.statement).yields(output))

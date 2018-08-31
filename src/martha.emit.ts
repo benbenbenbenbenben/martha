@@ -118,3 +118,21 @@ export class MethodDef {
 export class List {
     elements!: any[]
 }
+
+export class MacroDef {
+    name!: string
+    is!: string
+    as!: Statement[]
+
+    get identity():string { return `${this.name};${this.is}` }
+}
+
+export class ImportDef {
+    name!: string
+}
+
+export class TypeDef {
+    name!: string
+    basetype!: string
+    members!: { type:string, name:string }[]
+}

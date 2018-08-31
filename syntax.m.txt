@@ -1,0 +1,23 @@
+# macro types:
+# postfix, prefix, infix, block, atom, brackets, literal
+
+# prefix is: prefix $atom
+# postfix is: $atom postfix
+# infix is: $atom infix $atom
+# block is: block: $statement*
+# atom is: atom
+
+type: 
+    Binary
+with:
+    object: left
+    object: right
+
+type: 
+    ConditionalDot
+is: 
+    Binary
+
+macro: ?.
+is: postfix
+as: emit(ConditionalDot, { value: this.$atom })

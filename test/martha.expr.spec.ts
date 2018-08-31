@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import "mocha";
-import { AST } from "../martha.ast";
+import { AST } from "../src/martha.ast";
 import { Tibu, ResultTokens, Result } from "tibu";
-import { Mod, Def, Exp, Stmt } from "../martha.grammar";
-import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef } from "../martha.emit";
+import { Def, Exp, Stmt } from "../src/martha.grammar";
+import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef } from "../src/martha.emit";
 const { parse, rule, either, many, all, optional } = Tibu;
 
 const flat = (arr:any[]): any[] => {

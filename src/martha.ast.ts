@@ -1,7 +1,8 @@
+/// <reference path="tibu.d.ts">
 import { Tibu, Result, ResultTokens, Input, IRule, IToken, Pattern, IRuleAction } from "tibu";
 const { parse, token, rule, all, many, optional, either } = Tibu;
 
-import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List } from "./martha.emit";
+import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List, MacroDef, ImportDef, TypeDef } from "./martha.emit";
 import { Op, Mcro } from "./martha.grammar";
 const emit = Emit.Emit
 
@@ -99,22 +100,20 @@ class AST {
                                                     : [...part.members];
                     }
                 });
-                return type;
+                return emit(TypeDef, type);
         });
-        return {
-            types: flat(types)
-        };
+        console.log(types)
+        return flat(types)
     }
 
     static typedef_member(result:ResultTokens, cst:any):any {
         return {
             members: flat(cst)
-                    .filter(x => x)
-                    .filter(x => x.reference)
+                    .filter(x => isa(Reference)(x))
                     .map(x => {
                         return {
-                            type:result.one("typename"),
-                            name:x.reference
+                            type: result.one("typename"),
+                            name: x.name
                         };
                     })
         };
@@ -204,7 +203,7 @@ class AST {
     }
 
     static flatcst(result:ResultTokens, cst:any):any {
-        return flat(cst);
+        return cst ? flat(cst) : []
     }
 
     static reference(result:ResultTokens, cst:any):any {
@@ -312,8 +311,8 @@ class AST {
         if (result.tokens.length) {
             switch(result.tokens[0].name) {
                 case Op.arrow.__token__: return emit(Arrow, { value: flat(cst)[0]})
-                case Op.dot.__token__: return emit(Dot, { value: flat(cst)[0]})
-                case Op.conditionaldot.__token__: return emit(ConditionalDot, { value: flat(cst)[0]})
+                // case Op.dot.__token__: return emit(Dot, { value: flat(cst)[0]})
+                // case Op.conditionaldot.__token__: return emit(ConditionalDot, { value: flat(cst)[0]})
                 case Op.plusplus.__token__: return emit(PlusPlus_Postfix, { value: flat(cst)[0]})
                 case Op.minusminus.__token__: return emit(MinusMinus_Postfix, { value: flat(cst)[0]})
             }
@@ -355,6 +354,18 @@ class AST {
             return
         }
         return emit(Statement, { statement: flat(cst) })
+    }
+
+    static macrodef(result:ResultTokens, cst:any):any {
+        let fcst = flat(cst)
+        let name = fcst.find(x => x.named === "macro").result.one("member") || fcst.find(x => x.named === "macro").result.one("string").match(/.(.*)./)[1]
+        let is = flat(fcst.find(x => x.named === "is").cst)[0].statement[0].name
+        let as = flat(fcst.find(x => x.named === "as").cst)
+        return emit(MacroDef, { name, is, as })
+    }
+
+    static importdef(result:ResultTokens, cst:any):any {
+        return emit(ImportDef, { name: flat(cst).find(x => isa(Reference)(x)).name })
     }
 }
 
