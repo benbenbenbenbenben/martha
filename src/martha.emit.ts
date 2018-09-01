@@ -135,4 +135,5 @@ export class TypeDef {
     name!: string
     basetype!: string
     members!: { type:string, name:string }[]
+    methods!: any[]
 }

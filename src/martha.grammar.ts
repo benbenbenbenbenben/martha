@@ -10,6 +10,14 @@ const flat = (arr:any[]): any[] => {
          acc.concat(flat(val)) : acc.concat(val), []);
 }
 
+
+class WithParserContext {
+    public context:ParserContext
+    constructor(context:ParserContext) {
+        this.context = context
+    }
+}
+
 // helpers
 const manysep:any = (sep:Pattern, ...pattern:Pattern[]):(input:Input) => Result => {
     return optional(...pattern, many(sep, ...pattern));
@@ -32,14 +40,19 @@ const named = (name:string) => {
 }
 
 class Ctx {
-    contexts:any[] = []
-    push(ctx:any) : (input:Input) => Result {
+    context: ParserContext
+    contexts: any[];
+    constructor(context:ParserContext) {
+        this.context = context
+        this.contexts = []
+    }
+    push(ctx:any): (input:Input) => Result {
         return (input:Input):Result => {
             this.contexts.push(ctx)
             return Result.pass(input)
         }
     }
-    pop(ctx:any) : (input:Input) => Result {
+    pop(ctx:any): (input:Input) => Result {
         return (input:Input):Result => {
             if (this.contexts && this.contexts[this.contexts.length - 1] === ctx) {
                 this.contexts.pop()
@@ -48,7 +61,7 @@ class Ctx {
             return Result.fault(input)
         }
     }
-    peek(ctx:any) : (input:Input) => Result {
+    peek(ctx:any): (input:Input) => Result {
         return (input:Input):Result => {
             if (this.contexts && this.contexts[this.contexts.length - 1] === ctx) {
                 return Result.pass(input)
@@ -56,9 +69,11 @@ class Ctx {
             return Result.fault(input)
         }
     }
-    clear(input:Input): Result {
-        this.contexts = []
-        return Result.pass(input)
+    clear(): (input:Input) => Result {
+        return (input:Input):Result => {
+            this.contexts = []
+            return Result.pass(input)
+        }
     }
 }
 
@@ -202,8 +217,8 @@ class Op {
     get sorted2_binary(): IToken[] {
         return [
             this.dot,
-            this.mult,
             this.power,
+            this.mult,
             this.div,
             this.mod,
         ]
@@ -278,13 +293,16 @@ class Op {
             this.powereq,
         ]
     }
-    get sortedA_binary(): IToken[] {
+    get sortedA_binary(): IRule[] {
         return [
             this.infix_comma
         ]
     }
 }
-class Val {
+class Val extends WithParserContext {
+    constructor(context:ParserContext) {
+        super(context)
+    }
     bool         = token("bool", /true|false/);
     integer      = token("integer", /[\d]+/);
     str          = token("string", /"[^"]+"|'[^']+'/);
@@ -294,6 +312,10 @@ class Val {
     }
 }
 class Kwrd {
+    context: ParserContext
+    constructor(context:ParserContext) {
+        this.context = context
+    }
     // access
     public       = token("public", /public/);
     private      = token("private", /private/);
@@ -324,19 +346,21 @@ class Kwrd {
 
     import       = "import"
 }
-class Ref {
-    op: Op;
-    constructor(op:Op) {
-        this.op = op
+class Ref extends WithParserContext {
+    constructor(context:ParserContext) {
+        super(context)
     }
     // members and variables
     _member      = token("member", /[a-z_\$\@][a-z0-9\$\@]*/i);
     varname      = token("varname", /[a-z_\$\@][a-z0-9\$\@]*/i);
-    member       = rule(this._member, many(this.op.dot, this._member))
+    member       = rule(this._member, many(this.context.op.dot, this._member))
                             .yields(AST.reference);
     typename     = token("typename", /[a-z_\$\@][a-z0-9\$\@]*/i);
 }
-class Ws {
+class Ws extends WithParserContext {
+    constructor(context:ParserContext) {
+        super(context)
+    }
     space0ton    = /[ \t]*/;
     space1ton    = /[ \t]+/;
     newline      = /\r\n|\r|\n|\n\r/;
@@ -355,18 +379,17 @@ class Ws {
                         }
     IND_WS       = rule(this.space0ton, optional(this.IND));
     ANY_WS       = rule(/[\t\r\n\s]*/);
-    lr0ton       = (token:IToken) => rule(this.space0ton, token, this.space0ton) 
+    lr0ton       = (token:Pattern) => rule(this.space0ton, token, this.space0ton) 
 }
-class Util {
-    ws: Ws;
-    constructor(ws:Ws) {
-        this.ws = ws
+class Util extends WithParserContext {
+    constructor(context:ParserContext) {
+        super(context)
     }
     indents:string[] = [];
-    pushIndent       = rule(this.ws.space0ton, this.ws.newline, this.ws.indent).yields((r:ResultTokens) => {
+    pushIndent       = rule(this.context.ws.space0ton, this.context.ws.newline, this.context.ws.indent).yields((r:ResultTokens) => {
         this.indents.push(r.tokens[0].result.value);
     });
-    peekIndent       = rule(this.ws.newline, (input:Input):Result => {
+    peekIndent       = rule(this.context.ws.newline, (input:Input):Result => {
         let index:number = input.source.substring(input.location).indexOf(this.indents[this.indents.length - 1]);
         if (index === 0) {
             input.location += this.indents[this.indents.length - 1].length;
@@ -374,13 +397,13 @@ class Util {
         }
         return Result.fault(input);
     });
-    popIndent        = rule(this.ws.newline, (input:Input):Result => {
+    popIndent        = rule(this.context.ws.newline, (input:Input):Result => {
         this.indents.pop();
         return Result.pass(input);
     });
     EOF              = rule((input:Input):Result => input.location === input.source.length ?
                                     Result.pass(input) : Result.fault(input));
-    block            = (begin:IRule|string|RegExp|IToken, repeat:IRule|string|RegExp|IToken) => rule(
+    block            = (begin:Pattern, repeat:Pattern) => rule(
         begin, /[ \t]*:[ \t]*/,
         either(
             all(this.pushIndent, many(repeat, either(this.peekIndent, this.popIndent, this.EOF))),
@@ -390,34 +413,19 @@ class Util {
         )
     )
 }
-class Exp {
-    ctx: Ctx
-    def: Def
-    ref: Ref
-    op: Op
-    stmt: Stmt
-    val: Val
-    util: Util
-    ws: Ws
-    constructor(ctx:Ctx, def:Def, ref:Ref, op:Op, stmt:Stmt, val:Val, util:Util, ws:Ws) {
-        this.ctx = ctx
-        this.def = def
-        this.ref = ref
-        this.op = op
-        this.stmt = stmt
-        this.val = val
-        this.util = util
-        this.ws = ws
+class Exp extends WithParserContext {
+    constructor(context:ParserContext) {
+        super(context)
     }
-    atomliteral          = rule(this.val.anyliteral)
+    atomliteral          = rule(this.context.val.anyliteral)
     .yields(AST.atomliteral)
     ;    
-    atomlambdaliteral    = rule(this.util.block(
+    atomlambdaliteral    = rule(this.context.util.block(
         either(
-            all("(", () => this.def.argumentdefs, ")",),
-            () => this.def.argumentdef
-        ), () => this.stmt.statement));
-    atommember           = rule(this.ref.member)
+            all("(", () => this.context.def.argumentdefs, ")",),
+            () => this.context.def.argumentdef
+        ), () => this.context.stmt.statement));
+    atommember           = rule(this.context.ref.member)
     .yields(AST.atommember)
     ;
     /**
@@ -432,8 +440,8 @@ class Exp {
     ))
     atom                 = rule(
                                     either(
-                                            rule(this.subatom, many(this.ws.space0ton, this.subatom)),
-                                            rule(this.ctx.peek("spec")).yields(AST.thisref),
+                                            rule(this.subatom, many(this.context.ws.space0ton, this.subatom)),
+                                            rule(this.context.ctx.peek("spec")).yields(AST.thisref),
                                             ),
     )
     .yields(AST.atom)
@@ -442,51 +450,48 @@ class Exp {
      * cst producer
      */    
     expr0postfix         = rule(
-                                    this.atom, many(either(...this.op.postfixOperators))
+                                    this.atom, many(either(...this.context.op.postfixOperators))
                                 ).yields(AST.postfixexpr)
     expr1prefix          = rule(
-                                    many(either(...this.op.sorted1_prefix)), this.expr0postfix
+                                    many(either(...this.context.op.sorted1_prefix)), this.expr0postfix
                                 ).yields(AST.prefixexpr)
     expr2infix           = rule(
-                                    this.expr1prefix, many(this.ws.lr0ton(either(...this.op.sorted2_binary)), this.expr1prefix)
+                                    this.expr1prefix, many(this.context.ws.lr0ton(either(...this.context.op.sorted2_binary)), this.expr1prefix)
                                 ).yields(AST.binaryexpr)
     expr3infix           = rule(
-                                    this.expr2infix, many(this.ws.lr0ton(either(...this.op.sorted3_binary)), this.expr2infix)
+                                    this.expr2infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted3_binary)), this.expr2infix)
                                 ).yields(AST.binaryexpr)
     expr4infix           = rule(
-                                    this.expr3infix, many(this.ws.lr0ton(either(...this.op.sorted4_binary)), this.expr3infix)
+                                    this.expr3infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted4_binary)), this.expr3infix)
                                 ).yields(AST.binaryexpr)  
     expr5infix           = rule(
-                                    this.expr4infix, many(this.ws.lr0ton(either(...this.op.sorted5_binary)), this.expr4infix)
+                                    this.expr4infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted5_binary)), this.expr4infix)
                                 ).yields(AST.binaryexpr)
     expr6infix           = rule(
-                                    this.expr5infix, many(this.ws.lr0ton(either(...this.op.sorted6_binary)), this.expr5infix)
+                                    this.expr5infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted6_binary)), this.expr5infix)
                                 ).yields(AST.binaryexpr)
     expr7infix           = rule(
-                                    this.expr6infix, many(this.ws.lr0ton(either(...this.op.sorted7_binary)), this.expr6infix)
+                                    this.expr6infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted7_binary)), this.expr6infix)
                                 ).yields(AST.binaryexpr)
 
     expr9infix           = rule(
-                                    this.expr7infix, many(this.ws.lr0ton(either(...this.op.sorted9_binary)), this.expr7infix)
+                                    this.expr7infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted9_binary)), this.expr7infix)
                                 ).yields(AST.binaryexpr)
     exprAinfix           = rule(
-                                    this.expr9infix, many(this.ws.lr0ton(either(...this.op.sortedA_binary)), this.expr9infix)
+                                    this.expr9infix, many(this.context.ws.lr0ton(either(...this.context.op.sortedA_binary)), this.expr9infix)
                                 ).yields(AST.commaexpr)
 }
 
-class Stmt {
-    ctx: Ctx
-    exp: Exp
-    constructor(ctx:Ctx, exp:Exp) {
-        this.ctx = ctx
-        this.exp = exp     
+class Stmt extends WithParserContext {
+    constructor(context:ParserContext) {
+        super(context)
     }
     statement = rule(
         either(
            // rule(either(...Mcro.macros), Ws.space0ton, () => Stmt.statement).yields(AST.call),
-           // rule(this.exp.exprAinfix, "(", () => Stmt.statement, ")").yields(AST.calluser),
-           // rule(this.exp.exprAinfix, Ws.space1ton, () => Stmt.statement).yields(AST.calluser),
-            many(this.exp.exprAinfix, optional(this.ctx.clear))
+           // rule(this.context.exp.exprAinfix, "(", () => Stmt.statement, ")").yields(AST.calluser),
+           // rule(this.context.exp.exprAinfix, Ws.space1ton, () => Stmt.statement).yields(AST.calluser),
+            many(this.context.exp.exprAinfix, optional(this.context.ctx.clear()))
         )
     )
     .yields(AST.statement);
@@ -502,155 +507,156 @@ class Stmt {
    // .yields(AST.statement);
 }
 
-
-class Def {
-    ctx: Ctx
-    def: Def
-    kwrd: Kwrd
-    ref: Ref
-    op: Op
-    stmt: Stmt
-    val: Val
-    util: Util
-    ws: Ws
-    constructor(ctx:Ctx, def:Def, kwrd:Kwrd, ref:Ref, op:Op, stmt:Stmt, val:Val, util:Util, ws:Ws) {
-        this.ctx = ctx
-        this.def = def
-        this.kwrd = kwrd
-        this.ref = ref
-        this.op = op
-        this.stmt = stmt
-        this.val = val
-        this.util = util
-        this.ws = ws
+class Def extends WithParserContext {
+    constructor(context:ParserContext) {
+        super(context)
     }
     argumentspec = rule(
-            "{", this.ctx.push("spec"), this.stmt.statement, "}"//, this.ctx.pop("spec")
-        )
+            "{", this.context.ctx.push("spec"), this.context.stmt.statement, "}"//, this.context.ctx.pop("spec")
+    )
     .yields(AST.argumentsspec)
     ;
-    argumentdef = rule(this.ws.lr0ton(this.ref.typename), ":", this.ws.lr0ton(this.ref.varname), optional(this.argumentspec))
+    argumentdef = rule(this.context.ws.lr0ton(this.context.ref.typename), ":", this.context.ws.lr0ton(this.context.ref.varname), optional(this.argumentspec))
     .yields(AST.argumentdef)
     ;
-    returndef = rule(this.ref.typename, optional(this.argumentspec))
+    returndef = rule(this.context.ref.typename, optional(this.argumentspec))
     .yields(AST.returndef)
     ;
-    argumentdefs = rule(this.argumentdef, many(this.op.infix_comma, this.argumentdef))
+    argumentdefs = rule(this.argumentdef, many(this.context.op.infix_comma, this.argumentdef))
     .yields(AST.argumentdefs)
     ;
     methoddef = rule(
-        this.util.block(
+        this.context.util.block(
             all(
-                optional(rule(this.kwrd.anyaccess, many(this.ws.space1ton, this.kwrd.anyaccess), this.ws.space1ton).yields(AST.anyaccess)),
-                optional(this.kwrd.static, this.ws.space1ton),
-                optional(this.kwrd.async, this.ws.space1ton),
-                optional(this.kwrd.atomic, this.ws.space1ton),
-                optional(this.kwrd.critical, this.ws.space1ton),
+                optional(rule(this.context.kwrd.anyaccess, many(this.context.ws.space1ton, this.context.kwrd.anyaccess), this.context.ws.space1ton).yields(AST.anyaccess)),
+                optional(this.context.kwrd.static, this.context.ws.space1ton),
+                optional(this.context.kwrd.async, this.context.ws.space1ton),
+                optional(this.context.kwrd.atomic, this.context.ws.space1ton),
+                optional(this.context.kwrd.critical, this.context.ws.space1ton),
                 either(
-                    all(this.returndef, this.ws.space1ton, token("name", /\w+/)),
-                    this.kwrd.ctor
+                    all(this.returndef, this.context.ws.space1ton, token("name", /\w+/)),
+                    this.context.kwrd.ctor
                 ),
                 optional(
-                    this.ws.lr0ton(this.op.lparen),
+                    this.context.ws.lr0ton(this.context.op.lparen),
                         optional(this.argumentdefs),
-                    this.ws.lr0ton(this.op.rparen)
+                    this.context.ws.lr0ton(this.context.op.rparen)
                 ),
             ), 
-            many(this.stmt.statement))
+            many(this.context.stmt.statement))
     )
     .yields(AST.methoddef)
     ;
 
     macrodef = rule(
-        rule(this.util.block(this.kwrd.macro, either(this.ref._member, this.val.str))).yields(named("macro")),
-        rule(this.util.block(this.kwrd.is, this.stmt.statement)).yields(named("is")),
-        rule(this.util.block(this.kwrd.as, this.stmt.statement)).yields(named("as")),
+        rule(this.context.util.block(this.context.kwrd.macro, either(this.context.ref._member, this.context.val.str))).yields(named("macro")),
+        rule(this.context.util.block(this.context.kwrd.is, this.context.stmt.statement)).yields(named("is")),
+        rule(this.context.util.block(this.context.kwrd.as, this.context.stmt.statement)).yields(named("as")),
     )
     .yields(AST.macrodef)
     ;
     macrodefs = rule(
-        many(this.macrodef, optional(this.ws.ANY_WS))
+        many(this.macrodef, optional(this.context.ws.ANY_WS))
     )
     .yields(AST.flatcst)
     ;
 
-    membernames = rule(this.ref.member, many(optional(this.op.infix_comma, this.ref.member)))
+    membernames = rule(this.context.ref.member, many(optional(this.context.op.infix_comma, this.context.ref.member)))
     .yields((result:ResultTokens, cst:any) => {
         return flat(cst);
     });
 
-    importdef = rule(this.kwrd.import, this.ws.space1ton, this.ref.member)
+    importdef = rule(this.context.kwrd.import, this.context.ws.space1ton, this.context.ref.member)
     .yields(AST.importdef)
     ;
-    importdefs = rule(many(this.importdef, optional(this.ws.ANY_WS)))
+    importdefs = rule(many(this.importdef, optional(this.context.ws.ANY_WS)))
     .yields(AST.flatcst)
     ;
 
-    typedef_name = rule(this.ref.typename, many(optional(this.op.infix_comma, this.ref.typename)))
+    typedef_name = rule(this.context.ref.typename, many(this.context.op.infix_comma, this.context.ref.typename))
     .yields(AST.typedef_name)
     ;
-    typedef_member = rule(this.ref.typename, this.op.infix_colon, this.membernames)
+    typedef_member = rule(this.context.ref.typename, this.context.op.infix_colon, this.membernames)
     .yields(AST.typedef_member)
     ;
-    typedef_basetype = rule(this.ref.typename)
+    typedef_basetype = rule(this.context.ref.typename)
     .yields(AST.typedef_basetype)
     ;
     typedef = rule(
-        this.util.block(this.kwrd.type, this.typedef_name),
-        optional(this.util.block(this.kwrd.is, this.typedef_basetype)),
-        optional(this.util.block(this.kwrd.with, this.typedef_member)),
+        this.context.util.block(this.context.kwrd.type, this.typedef_name),
+        optional(this.context.util.block(this.context.kwrd.is, this.typedef_basetype)),
+        optional(this.context.util.block(this.context.kwrd.with, this.typedef_member)),
         many(this.methoddef)
     )
     .yields(AST.typedef)
     ;
-    typedefs = rule(many(this.typedef, optional(this.ws.ANY_WS)))
+    typedefs = rule(many(this.typedef, optional(this.context.ws.ANY_WS)))
     .yields(AST.flatcst)
     ;
 }
 
 class ParserContext {
-    ctx: Ctx
-    def: Def
-    ref: Ref
-    op: Op
-    stmt: Stmt
-    val: Val
-    util: Util
-    ws: Ws
-    constructor(ctx:Ctx, def:Def, ref:Ref, op:Op, stmt:Stmt, val:Val, util:Util, ws:Ws) {
-        this.ctx = ctx
-        this.def = def
-        this.ref = ref
-        this.op = op
-        this.stmt = stmt
-        this.val = val
-        this.util = util
-        this.ws = ws
+    op: Op;
+    ws: Ws;
+    val: Val;
+    util: Util;
+    def: Def;
+    stmt: Stmt;
+    ref: Ref;
+    ctx: Ctx;
+    exp: Exp;
+    kwrd: Kwrd;
+    mcro: Mcro;
+    
+    imports: IRule;
+    macros: IRule;
+    types: IRule;
+    statements: IRule;
+    program: IRule;
+    
+    constructor() {
+        this.op = new Op()
+        this.mcro = new Mcro()
+
+        this.ctx = new Ctx(this)
+        this.kwrd = new Kwrd(this)
+
+        this.ws = new Ws(this)
+
+        this.util = new Util(this)
+
+        this.ref = new Ref(this)
+        this.val = new Val(this)
+
+        this.exp = new Exp(this)
+        this.stmt = new Stmt(this)
+        this.def = new Def(this)
+
+        this.imports = rule(
+            optional(this.def.importdefs),
+        )
+        this.macros = rule(
+            optional(this.def.macrodefs),
+        )
+        this.types = rule(
+            optional(this.def.typedefs),
+        )
+        this.statements = rule(
+            many(this.stmt.statement),
+        )
+        this.program = rule(
+            this.ws.ANY_WS,
+            this.imports,
+            this.macros,
+            this.types,
+        // Compilation.statements,
+        )
     }
 
-    imports = rule(
-        optional(this.def.importdefs),
-    )
-    macros = rule(
-        optional(this.def.macrodefs),
-    )
-    types = rule(
-        optional(this.def.typedefs),
-    )
-    statements = rule(
-        optional(this.stmt.statements),
-    )
-
-    program = rule(
-        this.ws.ANY_WS,
-        this.imports,
-        this.macros,
-        this.types,
-       // Compilation.statements,
-    )
+    
 
     private macroDefs:MacroDef[] = []
-    private macroImpls:MacroImpl[] = []
+   // private macroImpls:MacroImpl[] = []
 
     public addMacro(macro:MacroDef):void {
         if (this.macroDefs.find(x => x.identity === macro.identity)) {
@@ -672,7 +678,6 @@ class ParserContext {
             this.program
             .yields((_:ResultTokens, cst:any) => {
                 const fcst = flat(cst)
-                console.log(fcst[2].as[0])
                 program.imports = fcst.filter(x => x instanceof ImportDef) || []
                 program.macros = fcst.filter(x => x instanceof MacroDef) || []
                 program.types = fcst.filter(x => x instanceof TypeDef) || []

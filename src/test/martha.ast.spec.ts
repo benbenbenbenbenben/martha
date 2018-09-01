@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import "mocha";
-import { AST } from "../src/martha.ast";
+import { AST } from "../martha.ast";
 import { Tibu, ResultTokens, Result } from "tibu";
-import { Def, Exp, Stmt, Ctx } from "../src/martha.grammar";
-import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef, Dot } from "../src/martha.emit";
+import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef, Dot } from "../martha.emit";
+import { ParserContext } from "../martha.grammar";
 const { parse, rule, either, many, all, optional } = Tibu;
 
 const flat = (arr:any[]): any[] => {
@@ -11,12 +11,12 @@ const flat = (arr:any[]): any[] => {
          acc.concat(flat(val)) : acc.concat(val), []);
 }
 
+const parserContext = new ParserContext()
+const Def = parserContext.def
+const Stmt = parserContext.stmt
+
 describe('syntax.m', () => {
     it('accepts type:\n    Binary\nwith:\n    object: left\n    object: right\n', () => {
-        // setup
-        let def = new Def(
-            new Ctx()
-        )
         // input
         let input = 'type:\n    Binary\nwith:\n    object: left\n    object: right\n'
         let proc = false

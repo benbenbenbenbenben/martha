@@ -5,7 +5,7 @@ module.exports = function() {
         'src/**/*.ts'
       ],
       tests: [
-        'test/**/*.spec.ts'
+        'src/test/**/*.spec.ts'
       ],
       debug: false,
       testFramework: 'mocha',

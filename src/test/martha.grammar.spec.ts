@@ -1,15 +1,19 @@
 import { expect } from "chai";
 import "mocha";
-import { AST } from "../src/martha.ast";
+import { AST } from "../martha.ast";
 import { Tibu, ResultTokens, Result } from "tibu";
-import { Def, Exp, Stmt } from "../src/martha.grammar";
-import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef, Dot } from "../src/martha.emit";
+import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef, Dot } from "../martha.emit";
+import { ParserContext } from "../martha.grammar";
 const { parse, rule, either, many, all, optional } = Tibu;
 
 const flat = (arr:any[]): any[] => {
     return arr.reduce((acc, val) => Array.isArray(val) ?
          acc.concat(flat(val)) : acc.concat(val), []);
 }
+
+const parserContext = new ParserContext()
+const Def = parserContext.def
+const Stmt = parserContext.stmt
 
 describe("types", () => {
      // type name

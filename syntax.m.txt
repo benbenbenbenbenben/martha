@@ -1,5 +1,8 @@
 # macro types:
-# postfix, prefix, infix, block, atom, brackets, literal
+# block, atom, brackets, literal
+
+# operator types:
+# postfix, prefix, infix
 
 # prefix is: prefix $atom
 # postfix is: $atom postfix

@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "test": "mocha -r ts-node/register test/**/*.spec.ts"
+    "test": "mocha -r ts-node/register src/test/**/*.spec.ts"
   },
   "author": "Benjamin Babik",
   "license": "MIT",

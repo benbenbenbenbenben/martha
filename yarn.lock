@@ -713,8 +713,9 @@ supports-color@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-2.0.0.tgz#535d045ce6b6363fa40117084629995e9df324c7"
 
-"tibu@file:../tibu":
+tibu@^0.0.1-alpha1:
   version "0.0.1-alpha1"
+  resolved "https://registry.yarnpkg.com/tibu/-/tibu-0.0.1-alpha1.tgz#a02a83d503453e20680c1167b22381fb41acb86b"
 
 trim-newlines@^1.0.0:
   version "1.0.0"

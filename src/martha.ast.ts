@@ -15,6 +15,11 @@ const isa = (T:any) => (x:any): boolean => {
     return x instanceof T
 }
 
+const named = (cst:any[], name:string) => {
+    const fcst = flat(cst)
+    return fcst.find(x => x.name === name)
+}
+
 class AST {
     static anyaccess(result:ResultTokens, cst:any):any {
         return emit(MethodAccess, {
@@ -71,6 +76,7 @@ class AST {
     }
 
     static methoddef(result:ResultTokens, cst:any):MethodDef {
+        console.log(cst ? flat(cst) : "nocst")
         return emit(MethodDef, {
             name: result.one("ctor") || result.one("name"),
             access: cst && flat(cst).find(x => x instanceof MethodAccess),
@@ -84,25 +90,30 @@ class AST {
     }
 
     static typedef(result:ResultTokens, cst:any):any {
-        let types:any[] = flat(cst)
+        const fcst = flat(cst)
+        console.log(fcst)
+        let types:any[] = fcst
             .filter(x => x)
             .filter(x => x.name)
             .map((name:any) => {
-                let type:any = {
-                    name: name.name[0]
-                };
-                flat(cst).filter(x => x).forEach(part => {
-                    if (part.basetype) {
-                        type.basetype = part.basetype[0];
-                    }
-                    if (part.members) {
-                        type.members = type.members ? [...type.members, ...part.members]
-                                                    : [...part.members];
-                    }
-                });
-                return emit(TypeDef, type);
-        });
-        console.log(types)
+                return [...name.name].map((name:string) => {
+                    let type:any = {
+                        name
+                    };
+                    flat(cst).filter(x => x).forEach(part => {
+                        if (part.basetype) {
+                            type.basetype = part.basetype[0];
+                        }
+                        if (part.members) {
+                            type.members = type.members ? [...type.members, ...part.members]
+                                                        : [...part.members];
+                        }
+                    });
+                    type.methods = fcst.filter(x => isa(MethodDef)(x))
+                    return emit(TypeDef, type);
+                })
+            }
+        );
         return flat(types)
     }
 
@@ -266,41 +277,42 @@ class AST {
         }
         return flat(cst).slice(1).reduce(
             (left, right) => {
+                let op = new Op()
                 switch(result.tokens[0].name) {
-                    case Op.dot.__token__: return (isa(Reference)(left) && isa(Reference)(right))
+                    case op.dot.__token__: return (isa(Reference)(left) && isa(Reference)(right))
                         ? emit(Reference, { name: `${left.name}.${right.name}`}) 
                         : emit(Dot, { left, right })
-                    case Op.mult.__token__: return emit(Mult, { left, right })
-                    case Op.power.__token__: return emit(Power, { left, right })
-                    case Op.div.__token__: return emit(Div, { left, right })
-                    case Op.mod.__token__: return emit(Mod, { left, right })
-                    case Op.plus.__token__: return emit(Plus, { left, right })
-                    case Op.minus.__token__: return emit(Minus, { left, right })
-                    case Op.shiftleft.__token__: return emit(ShiftLeft, { left, right })
-                    case Op.shiftright.__token__: return emit(ShiftRight, { left, right })
-                    case Op.lt.__token__: return emit(Lt, { left, right })
-                    case Op.lte.__token__: return emit(Lte, { left, right })
-                    case Op.gt.__token__: return emit(Gt, { left, right })
-                    case Op.gte.__token__: return emit(Gte, { left, right })
-                    case Op.eqeq.__token__: return emit(EqEq, { left, right })
-                    case Op.noteq.__token__: return emit(NotEq, { left, right })
-                    case Op.amp.__token__: return emit(Amp, { left, right })
-                    case Op.caret.__token__: return emit(Caret, { left, right })
-                    case Op.pipe.__token__: return emit(Pipe, { left, right })
-                    case Op.ampamp.__token__: return emit(AmpAmp, { left, right })
-                    case Op.pipepipe.__token__: return emit(PipePipe, { left, right })
-                    case Op.assign.__token__: return emit(Assignment, { left, right })
-                    case Op.pluseq.__token__: return emit(PlusEq, { left, right})
-                    case Op.minuseq.__token__: return emit(MinusEq, { left, right})
-                    case Op.multeq.__token__: return emit(MultEq, { left, right})
-                    case Op.diveq.__token__: return emit(DivEq, { left, right})
-                    case Op.modeq.__token__: return emit(ModEq, { left, right})
-                    case Op.shreq.__token__: return emit(ShREq, { left, right})
-                    case Op.shleq.__token__: return emit(ShLEq, { left, right})
-                    case Op.ampeq.__token__: return emit(AmpEq, { left, right})
-                    case Op.careteq.__token__: return emit(CaretEq, { left, right})
-                    case Op.pipeeq.__token__: return emit(PipeEq, { left, right})
-                    case Op.powereq.__token__: return emit(PowerEq, { left, right})
+                    case op.mult.__token__: return emit(Mult, { left, right })
+                    case op.power.__token__: return emit(Power, { left, right })
+                    case op.div.__token__: return emit(Div, { left, right })
+                    case op.mod.__token__: return emit(Mod, { left, right })
+                    case op.plus.__token__: return emit(Plus, { left, right })
+                    case op.minus.__token__: return emit(Minus, { left, right })
+                    case op.shiftleft.__token__: return emit(ShiftLeft, { left, right })
+                    case op.shiftright.__token__: return emit(ShiftRight, { left, right })
+                    case op.lt.__token__: return emit(Lt, { left, right })
+                    case op.lte.__token__: return emit(Lte, { left, right })
+                    case op.gt.__token__: return emit(Gt, { left, right })
+                    case op.gte.__token__: return emit(Gte, { left, right })
+                    case op.eqeq.__token__: return emit(EqEq, { left, right })
+                    case op.noteq.__token__: return emit(NotEq, { left, right })
+                    case op.amp.__token__: return emit(Amp, { left, right })
+                    case op.caret.__token__: return emit(Caret, { left, right })
+                    case op.pipe.__token__: return emit(Pipe, { left, right })
+                    case op.ampamp.__token__: return emit(AmpAmp, { left, right })
+                    case op.pipepipe.__token__: return emit(PipePipe, { left, right })
+                    case op.assign.__token__: return emit(Assignment, { left, right })
+                    case op.pluseq.__token__: return emit(PlusEq, { left, right})
+                    case op.minuseq.__token__: return emit(MinusEq, { left, right})
+                    case op.multeq.__token__: return emit(MultEq, { left, right})
+                    case op.diveq.__token__: return emit(DivEq, { left, right})
+                    case op.modeq.__token__: return emit(ModEq, { left, right})
+                    case op.shreq.__token__: return emit(ShREq, { left, right})
+                    case op.shleq.__token__: return emit(ShLEq, { left, right})
+                    case op.ampeq.__token__: return emit(AmpEq, { left, right})
+                    case op.careteq.__token__: return emit(CaretEq, { left, right})
+                    case op.pipeeq.__token__: return emit(PipeEq, { left, right})
+                    case op.powereq.__token__: return emit(PowerEq, { left, right})
                 }
             }
             , flat(cst)[0]
@@ -309,37 +321,40 @@ class AST {
 
     static postfixexpr(result:ResultTokens, cst:any):any {    
         if (result.tokens.length) {
+            let op = new Op()
             switch(result.tokens[0].name) {
-                case Op.arrow.__token__: return emit(Arrow, { value: flat(cst)[0]})
-                // case Op.dot.__token__: return emit(Dot, { value: flat(cst)[0]})
-                // case Op.conditionaldot.__token__: return emit(ConditionalDot, { value: flat(cst)[0]})
-                case Op.plusplus.__token__: return emit(PlusPlus_Postfix, { value: flat(cst)[0]})
-                case Op.minusminus.__token__: return emit(MinusMinus_Postfix, { value: flat(cst)[0]})
+                case op.arrow.__token__: return emit(Arrow, { value: flat(cst)[0]})
+                // case op.dot.__token__: return emit(Dot, { value: flat(cst)[0]})
+                // case op.conditionaldot.__token__: return emit(ConditionalDot, { value: flat(cst)[0]})
+                case op.plusplus.__token__: return emit(PlusPlus_Postfix, { value: flat(cst)[0]})
+                case op.minusminus.__token__: return emit(MinusMinus_Postfix, { value: flat(cst)[0]})
             }
         }        
         return flat(cst)
     }
 
     static prefixexpr(result:ResultTokens, cst:any):any {
+        let op = new Op()
+        let mcro = new Mcro()
        // return result.tokens.length
         if (result.tokens.length) {
             switch(result.tokens[0].name) {
-                case Op.plusplus.__token__: return emit(PlusPlus, { value: flat(cst)[0] })
-                case Op.minusminus.__token__: return emit(MinusMinus, { value: flat(cst)[0] })
-                case Op.plus.__token__: return emit(Plus_Prefix, { value: flat(cst)[0] })
-                case Op.minus.__token__: return emit(Minus_Prefix, { value: flat(cst)[0] })
-                case Op.exc.__token__: return emit(Exc, { value: flat(cst)[0] })
-                case Op.tilde.__token__: return emit(Tilde, { value: flat(cst)[0] })
-                case Op.splat.__token__: return emit(Splat, { value: flat(cst)[0] })
-                case Op.dot.__token__: return emit(Dot_Prefix, { value: flat(cst)[0] })
-                case Mcro._typeof.__token__: return emit(TypeOf, { value: flat(cst)[0] })
-                case Mcro._addrof.__token__: return emit(AddrOf, { value: flat(cst)[0] })
-                case Mcro._sizeof.__token__: return emit(SizeOf, { value: flat(cst)[0] })
-                case Mcro.stateof.__token__: return emit(StateOf, { value: flat(cst)[0] })
-                case Mcro.swapto.__token__: return emit(SwapTo, { value: flat(cst)[0] })
-                case Mcro._new.__token__: return emit(New, { value: flat(cst)[0] })
-                case Mcro.delete.__token__: return emit(Delete, { value: flat(cst)[0] })
-                case Mcro.return.__token__: return emit(Return, { value: flat(cst)[0] })
+                case op.plusplus.__token__: return emit(PlusPlus, { value: flat(cst)[0] })
+                case op.minusminus.__token__: return emit(MinusMinus, { value: flat(cst)[0] })
+                case op.plus.__token__: return emit(Plus_Prefix, { value: flat(cst)[0] })
+                case op.minus.__token__: return emit(Minus_Prefix, { value: flat(cst)[0] })
+                case op.exc.__token__: return emit(Exc, { value: flat(cst)[0] })
+                case op.tilde.__token__: return emit(Tilde, { value: flat(cst)[0] })
+                case op.splat.__token__: return emit(Splat, { value: flat(cst)[0] })
+                case op.dot.__token__: return emit(Dot_Prefix, { value: flat(cst)[0] })
+                case mcro._typeof.__token__: return emit(TypeOf, { value: flat(cst)[0] })
+                case mcro._addrof.__token__: return emit(AddrOf, { value: flat(cst)[0] })
+                case mcro._sizeof.__token__: return emit(SizeOf, { value: flat(cst)[0] })
+                case mcro.stateof.__token__: return emit(StateOf, { value: flat(cst)[0] })
+                case mcro.swapto.__token__: return emit(SwapTo, { value: flat(cst)[0] })
+                case mcro._new.__token__: return emit(New, { value: flat(cst)[0] })
+                case mcro.delete.__token__: return emit(Delete, { value: flat(cst)[0] })
+                case mcro.return.__token__: return emit(Return, { value: flat(cst)[0] })
             }
         }
         return flat(cst)
