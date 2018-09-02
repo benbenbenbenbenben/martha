@@ -26,7 +26,9 @@ describe('syntax.m', () => {
                 [ { name: 'Binary',
                     members: 
                      [ { type: 'object', name: 'left' },
-                       { type: 'object', name: 'right' } ] } ] )
+                       { type: 'object', name: 'right' } ],
+                       methods: [],
+                } ] )
             proc = true
         }
         parse(input)(rule(Def.typedef).yields(output))

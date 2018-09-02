@@ -58,10 +58,11 @@ class Ctx {
             return tibu_1.Result.fault(input);
         };
     }
-    clear(input) {
-        console.log(this);
-        this.contexts = [];
-        return tibu_1.Result.pass(input);
+    clear() {
+        return (input) => {
+            this.contexts = [];
+            return tibu_1.Result.pass(input);
+        };
     }
 }
 exports.Ctx = Ctx;
@@ -122,6 +123,7 @@ class Op {
         this.mult = token("mult", "*");
         this.mod = token("mod", "%");
         this.power = token("power", "**");
+        this.range = token("range", "..");
         // prefix/suffix
         this.plusplus = token("plusplus", "++");
         this.minusminus = token("minusminus", "--");
@@ -194,8 +196,8 @@ class Op {
     get sorted2_binary() {
         return [
             this.dot,
-            this.mult,
             this.power,
+            this.mult,
             this.div,
             this.mod,
         ];
@@ -248,6 +250,7 @@ class Op {
             this.pipe,
             this.ampamp,
             this.pipepipe,
+            this.range,
         ];
     }
     /**
@@ -381,13 +384,17 @@ class Exp extends WithParserContext {
         super(context);
         this.atomliteral = rule(this.context.val.anyliteral)
             .yields(martha_ast_1.AST.atomliteral);
-        this.atomlambdaliteral = rule(this.context.util.block(either(all("(", () => this.context.def.argumentdefs, ")"), () => this.context.def.argumentdef), () => this.context.stmt.statement));
+        this.atomlambdaliteral = rule(rule(either(
+        //all("(", () => this.context.def.argumentdefs, ")",),
+        //() => this.context.def.argumentdef,
+        this.context.ref._member)).yields(named("spec")), this.context.ws.lr0ton("=>"), rule(() => this.context.stmt.statement).yields(named("body")))
+            .yields(martha_ast_1.AST.atomlambdaliteral);
         this.atommember = rule(this.context.ref.member)
             .yields(martha_ast_1.AST.atommember);
         /**
          * cst producer
          */
-        this.subatom = rule(either(oneormore(rule("(", optional(() => this.exprAinfix), ")").yields(martha_ast_1.AST.parenthesis)), oneormore(rule(/\{[ \t]*/, optional(() => this.exprAinfix), /[ \t]*\}/).yields(martha_ast_1.AST.parenthesis)), oneormore(rule("[", () => this.exprAinfix, "]").yields(martha_ast_1.AST.parenthesis)), this.atomliteral, this.atommember));
+        this.subatom = rule(either(this.atomlambdaliteral, oneormore(rule("(", optional(() => this.exprAinfix), ")").yields(martha_ast_1.AST.bracketparen)), oneormore(rule(/\{[ \t]*/, optional(() => this.exprAinfix), /[ \t]*\}/).yields(martha_ast_1.AST.bracketcurly)), oneormore(rule("[", () => this.exprAinfix, "]").yields(martha_ast_1.AST.bracketarray)), this.atomliteral, this.atommember));
         this.atom = rule(either(rule(this.subatom, many(this.context.ws.space0ton, this.subatom)), rule(this.context.ctx.peek("spec")).yields(martha_ast_1.AST.thisref)))
             .yields(martha_ast_1.AST.atom);
         /**
@@ -444,7 +451,7 @@ class Def extends WithParserContext {
             .yields(martha_ast_1.AST.importdef);
         this.importdefs = rule(many(this.importdef, optional(this.context.ws.ANY_WS)))
             .yields(martha_ast_1.AST.flatcst);
-        this.typedef_name = rule(this.context.ref.typename, many(optional(this.context.op.infix_comma, this.context.ref.typename)))
+        this.typedef_name = rule(this.context.ref.typename, many(this.context.op.infix_comma, this.context.ref.typename))
             .yields(martha_ast_1.AST.typedef_name);
         this.typedef_member = rule(this.context.ref.typename, this.context.op.infix_colon, this.membernames)
             .yields(martha_ast_1.AST.typedef_member);
@@ -482,8 +489,6 @@ class ParserContext {
         if (this.macroDefs.find(x => x.identity === macro.identity)) {
             throw new Error(`Macro ${macro.identity} is already registered.`);
         }
-        if (macro.is === "infix") {
-        }
         this.macroDefs.push(macro);
     }
     parse(source) {
@@ -491,7 +496,6 @@ class ParserContext {
         parse(source)(this.ws.ANY_WS, this.program
             .yields((_, cst) => {
             const fcst = flat(cst);
-            console.log(fcst[2].as[0]);
             program.imports = fcst.filter(x => x instanceof martha_emit_1.ImportDef) || [];
             program.macros = fcst.filter(x => x instanceof martha_emit_1.MacroDef) || [];
             program.types = fcst.filter(x => x instanceof martha_emit_1.TypeDef) || [];

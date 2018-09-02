@@ -21,7 +21,9 @@ describe('syntax.m', () => {
         let output = (r, c) => {
             chai_1.expect(flat(c)).to.deep.eq([{ name: 'Binary',
                     members: [{ type: 'object', name: 'left' },
-                        { type: 'object', name: 'right' }] }]);
+                        { type: 'object', name: 'right' }],
+                    methods: [],
+                }]);
             proc = true;
         };
         parse(input)(rule(Def.typedef).yields(output));

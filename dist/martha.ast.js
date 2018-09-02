@@ -13,6 +13,10 @@ const flat = (arr) => {
 const isa = (T) => (x) => {
     return x instanceof T;
 };
+const named = (cst, name) => {
+    const fcst = flat(cst);
+    return fcst.find(x => x.named === name);
+};
 class AST {
     static anyaccess(result, cst) {
         return emit(martha_emit_1.MethodAccess, {
@@ -75,25 +79,28 @@ class AST {
         });
     }
     static typedef(result, cst) {
-        let types = flat(cst)
+        const fcst = flat(cst);
+        let types = fcst
             .filter(x => x)
             .filter(x => x.name)
             .map((name) => {
-            let type = {
-                name: name.name[0]
-            };
-            flat(cst).filter(x => x).forEach(part => {
-                if (part.basetype) {
-                    type.basetype = part.basetype[0];
-                }
-                if (part.members) {
-                    type.members = type.members ? [...type.members, ...part.members]
-                        : [...part.members];
-                }
+            return [...name.name].map((name) => {
+                let type = {
+                    name
+                };
+                flat(cst).filter(x => x).forEach(part => {
+                    if (part.basetype) {
+                        type.basetype = part.basetype[0];
+                    }
+                    if (part.members) {
+                        type.members = type.members ? [...type.members, ...part.members]
+                            : [...part.members];
+                    }
+                });
+                type.methods = fcst.filter(x => isa(martha_emit_1.MethodDef)(x));
+                return emit(martha_emit_1.TypeDef, type);
             });
-            return emit(martha_emit_1.TypeDef, type);
         });
-        console.log(types);
         return flat(types);
     }
     static typedef_member(result, cst) {
@@ -117,6 +124,21 @@ class AST {
         return {
             basetype: result.get("typename")
         };
+    }
+    static atomlambdaliteral(result, cst) {
+        const spec = named(cst, "spec");
+        const body = named(cst, "body");
+        let lambda = emit(martha_emit_1.Lambda, {
+            name: spec.result.tokens[0].result.value,
+            access: undefined,
+            async: false,
+            atomic: false,
+            critical: false,
+            arguments: [],
+            body: flat(body.cst),
+            return: emit(martha_emit_1.ReturnDef, { type: "computed", spec: "computed" })
+        });
+        return lambda;
     }
     static atomparen(result, cst) {
         return {
@@ -209,8 +231,14 @@ class AST {
     static target(result, cst) {
         return { target: flat(cst) };
     }
-    static parenthesis(result, cst) {
-        return { parenthesis: cst ? flat(cst) : [] };
+    static bracketparen(result, cst) {
+        return { bracketparen: cst ? flat(cst) : [] };
+    }
+    static bracketarray(result, cst) {
+        return { bracketarray: cst ? flat(cst) : [] };
+    }
+    static bracketcurly(result, cst) {
+        return { bracketcurly: cst ? flat(cst) : [] };
     }
     static commaexpr(result, cst) {
         let fcst = flat(cst);
@@ -323,7 +351,7 @@ class AST {
         let name = fcst.find(x => x.named === "macro").result.one("member") || fcst.find(x => x.named === "macro").result.one("string").match(/.(.*)./)[1];
         let is = flat(fcst.find(x => x.named === "is").cst)[0].statement[0].name;
         let as = flat(fcst.find(x => x.named === "as").cst);
-        return emit(martha_emit_1.MacroDef, { name, is, as });
+        return emit(martha_emit_1.MacroDef, { name, as });
     }
     static importdef(result, cst) {
         return emit(martha_emit_1.ImportDef, { name: flat(cst).find(x => isa(martha_emit_1.Reference)(x)).name });

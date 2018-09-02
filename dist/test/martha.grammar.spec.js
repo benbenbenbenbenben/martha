@@ -396,6 +396,26 @@ describe("Def", () => {
             parse(input)(rule(Def.macrodef).yields(output));
             chai_1.expect(proc).to.be.eq(true);
         });
+        it('accepts macro: foringenerator', () => {
+            // input
+            let input = `
+macro: foringenerator
+as $atom ($statement for $atom.reference in $atom.range):
+    $statement.bind $atom.reference $atom.range.current
+    emit(Generator, { 
+        next: $atom.range.next
+        current: $statement
+    })
+`;
+            let proc = false;
+            // output
+            let output = (r, c) => {
+                chai_1.expect(flat(c)).to.deep.eq([{}]);
+                proc = true;
+            };
+            parse(input)(rule().yields(output));
+            chai_1.expect(proc).to.be.eq(true);
+        });
     });
 });
 describe('Exp', () => {
@@ -456,16 +476,16 @@ describe('Exp', () => {
                                 left: { name: "a" },
                                 right: {
                                     left: {
-                                        parenthesis: [
+                                        bracketparen: [
                                             { left: { name: "b" }, right: { name: "c" } }
                                         ]
                                     },
                                     right: {
-                                        parenthesis: [
+                                        bracketparen: [
                                             {
                                                 left: { name: "a" },
                                                 right: {
-                                                    parenthesis: [
+                                                    bracketparen: [
                                                         { left: { name: "f" }, right: { name: "i" } }
                                                     ]
                                                 }

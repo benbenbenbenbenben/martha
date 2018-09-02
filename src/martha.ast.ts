@@ -2,7 +2,7 @@
 import { Tibu, Result, ResultTokens, Input, IRule, IToken, Pattern, IRuleAction } from "tibu";
 const { parse, token, rule, all, many, optional, either } = Tibu;
 
-import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List, MacroDef, ImportDef, TypeDef } from "./martha.emit";
+import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List, MacroDef, ImportDef, TypeDef, Lambda } from "./martha.emit";
 import { Op, Mcro } from "./martha.grammar";
 const emit = Emit.Emit
 
@@ -17,7 +17,7 @@ const isa = (T:any) => (x:any): boolean => {
 
 const named = (cst:any[], name:string) => {
     const fcst = flat(cst)
-    return fcst.find(x => x.name === name)
+    return fcst.find(x => x.named === name)
 }
 
 class AST {
@@ -76,7 +76,6 @@ class AST {
     }
 
     static methoddef(result:ResultTokens, cst:any):MethodDef {
-        console.log(cst ? flat(cst) : "nocst")
         return emit(MethodDef, {
             name: result.one("ctor") || result.one("name"),
             access: cst && flat(cst).find(x => x instanceof MethodAccess),
@@ -91,7 +90,6 @@ class AST {
 
     static typedef(result:ResultTokens, cst:any):any {
         const fcst = flat(cst)
-        console.log(fcst)
         let types:any[] = fcst
             .filter(x => x)
             .filter(x => x.name)
@@ -140,6 +138,24 @@ class AST {
         return {
             basetype: result.get("typename")
         };
+    }
+
+    static atomlambdaliteral(result:ResultTokens, cst:any):Lambda {
+        const spec = named(cst, "spec")
+        const body = named(cst, "body")
+
+        let lambda = emit(Lambda, {
+            name: spec.result.tokens[0].result.value,
+            access: undefined,
+            async: false,
+            atomic: false,
+            critical: false,
+            arguments: [],
+            body: flat(body.cst),
+            return: emit(ReturnDef, { type: "computed", spec: "computed" })
+        })
+        
+        return lambda
     }
 
     static atomparen(result:ResultTokens, cst:any):any {
@@ -250,8 +266,14 @@ class AST {
         return { target: flat(cst) }
     }
 
-    static parenthesis(result:ResultTokens, cst:any):any {
-        return { parenthesis: cst ? flat(cst) : [] }
+    static bracketparen(result:ResultTokens, cst:any):any {
+        return { bracketparen: cst ? flat(cst) : [] }
+    }
+    static bracketarray(result:ResultTokens, cst:any):any {
+        return { bracketarray: cst ? flat(cst) : [] }
+    }
+    static bracketcurly(result:ResultTokens, cst:any):any {
+        return { bracketcurly: cst ? flat(cst) : [] }
     }
 
     static commaexpr(result:ResultTokens, cst:any):any {
@@ -372,11 +394,12 @@ class AST {
     }
 
     static macrodef(result:ResultTokens, cst:any):any {
+        console.log(JSON.stringify(flat(flat(named(cst, "as").cst)), null, 2))
         let fcst = flat(cst)
         let name = fcst.find(x => x.named === "macro").result.one("member") || fcst.find(x => x.named === "macro").result.one("string").match(/.(.*)./)[1]
         let is = flat(fcst.find(x => x.named === "is").cst)[0].statement[0].name
         let as = flat(fcst.find(x => x.named === "as").cst)
-        return emit(MacroDef, { name, is, as })
+        return emit(MacroDef, { name, as })
     }
 
     static importdef(result:ResultTokens, cst:any):any {

@@ -121,10 +121,9 @@ export class List {
 
 export class MacroDef {
     name!: string
-    is!: string
-    as!: Statement[]
-
-    get identity():string { return `${this.name};${this.is}` }
+    as!: any
+    rule?: any
+    body?: any
 }
 
 export class ImportDef {
@@ -136,4 +135,7 @@ export class TypeDef {
     basetype!: string
     members!: { type:string, name:string }[]
     methods!: any[]
+}
+
+export class Lambda extends MethodDef {
 }

@@ -132,6 +132,7 @@ class Op {
     mult             = token("mult", "*");
     mod              = token("mod", "%");
     power            = token("power", "**");
+    range            = token("range", "..")
 
     // prefix/suffix
     plusplus         = token("plusplus", "++");
@@ -271,6 +272,7 @@ class Op {
             this.pipe,
             this.ampamp,
             this.pipepipe,
+            this.range, // TODO: consider, range operator should be 8th not 7th
         ]
     }
 
@@ -420,11 +422,14 @@ class Exp extends WithParserContext {
     atomliteral          = rule(this.context.val.anyliteral)
     .yields(AST.atomliteral)
     ;    
-    atomlambdaliteral    = rule(this.context.util.block(
-        either(
-            all("(", () => this.context.def.argumentdefs, ")",),
-            () => this.context.def.argumentdef
-        ), () => this.context.stmt.statement));
+    atomlambdaliteral    = rule(
+        rule(either(
+            //all("(", () => this.context.def.argumentdefs, ")",),
+            //() => this.context.def.argumentdef,
+            this.context.ref._member
+        )).yields(named("spec")), this.context.ws.lr0ton("=>"), rule(() => this.context.stmt.statement).yields(named("body")))
+    .yields(AST.atomlambdaliteral)
+    ;
     atommember           = rule(this.context.ref.member)
     .yields(AST.atommember)
     ;
@@ -432,9 +437,10 @@ class Exp extends WithParserContext {
      * cst producer
      */
     subatom = rule(either(
-        oneormore(rule("(", optional(() => this.exprAinfix), ")").yields(AST.parenthesis)),
-        oneormore(rule(/\{[ \t]*/, optional(() => this.exprAinfix), /[ \t]*\}/).yields(AST.parenthesis)),
-        oneormore(rule("[", () => this.exprAinfix, "]").yields(AST.parenthesis)),
+        this.atomlambdaliteral,
+        oneormore(rule("(", optional(() => this.exprAinfix), ")").yields(AST.bracketparen)),
+        oneormore(rule(/\{[ \t]*/, optional(() => this.exprAinfix), /[ \t]*\}/).yields(AST.bracketcurly)),
+        oneormore(rule("[", () => this.exprAinfix, "]").yields(AST.bracketarray)),
         this.atomliteral,
         this.atommember,        
     ))
@@ -495,6 +501,15 @@ class Stmt extends WithParserContext {
         )
     )
     .yields(AST.statement);
+    macrospecification = rule(
+        token("insert", /\$\w+/),
+        this.context.ws.lr0ton("("),
+        many(either(
+            rule(this.context.ws.lr0ton(token("rulereference", /\$[a-z0-9\.]+/i))),//.yields(named("reference"))),
+            rule(this.context.ws.lr0ton(token("ruleword", /\w+/)).yields(named("word")))
+        )),
+        this.context.ws.lr0ton(")"),
+    )
    // static statement        = rule(many(either(
    //     Stmt.stmt_expression,
         // z Stmt.stmt_switch,
@@ -550,8 +565,14 @@ class Def extends WithParserContext {
 
     macrodef = rule(
         rule(this.context.util.block(this.context.kwrd.macro, either(this.context.ref._member, this.context.val.str))).yields(named("macro")),
-        rule(this.context.util.block(this.context.kwrd.is, this.context.stmt.statement)).yields(named("is")),
-        rule(this.context.util.block(this.context.kwrd.as, this.context.stmt.statement)).yields(named("as")),
+        rule(this.context.util.block(
+            rule(
+                this.context.kwrd.as,
+                this.context.ws.space1ton,                
+                this.context.stmt.macrospecification
+            ), 
+            this.context.stmt.statement)
+        ).yields(named("as")),
     )
     .yields(AST.macrodef)
     ;
@@ -659,13 +680,11 @@ class ParserContext {
    // private macroImpls:MacroImpl[] = []
 
     public addMacro(macro:MacroDef):void {
-        if (this.macroDefs.find(x => x.identity === macro.identity)) {
-            throw new Error(`Macro ${macro.identity} is already registered.`)
+        const identity = (x:MacroDef) => x.name
+        if (this.macroDefs.find(x => identity(x) === identity(macro))) {
+            throw new Error(`Macro ${identity(macro)} is already registered.`)
         }
 
-        if (macro.is === "infix") {
-            
-        }
         this.macroDefs.push(macro)
     }
 

@@ -10,9 +10,13 @@ describe("Martha!", () => {
 `
 import core
 
-macro: "=>"
-is: infix
-as: $left "=>" $right 
+macro: foringenerator
+as $atom ($statement for $atom.reference in $atom.range):
+    $statement.bind $atom.reference $atom.range.current
+    emit(Generator, { 
+        next: $atom.range.next
+        current: $statement
+    })
 
 type:
 	Party
@@ -29,10 +33,10 @@ with:
 constructor:
     a = 10
     b = 20
-    d, e = get2things
+    let d e = get2things
     call(10)
     call(a(b(c(10, 90))))
-    z = g => g ** g
+    z = g => x => g ** x
     j = u * 4 for u in 1..100
 atomic void record(Array[]:items{.len > 0}, int:f{> 0}, bool:flag, ref Vector<string>:s)
     ledger.process(sum)
@@ -42,7 +46,7 @@ atomic int{> 0} send(Address:to, int:amount{> 0})
 
 `
        )
-       console.log(program.types[1].methods[0].body)
+       console.log(program.types[1].methods[0].body[6].statement)
        martha.load(program)
    })
 });

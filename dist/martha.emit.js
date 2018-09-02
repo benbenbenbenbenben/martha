@@ -210,7 +210,7 @@ class List {
 }
 exports.List = List;
 class MacroDef {
-    get identity() { return `${this.name};${this.is}`; }
+    identity() { return `${this.name};${this.rule}`; }
 }
 exports.MacroDef = MacroDef;
 class ImportDef {
@@ -219,4 +219,7 @@ exports.ImportDef = ImportDef;
 class TypeDef {
 }
 exports.TypeDef = TypeDef;
+class Lambda extends MethodDef {
+}
+exports.Lambda = Lambda;
 //# sourceMappingURL=martha.emit.js.map
