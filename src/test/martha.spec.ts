@@ -6,18 +6,22 @@ import { Martha } from "../martha";
 describe("Martha!", () => {
    it('compiles a macro program', () => {
        let martha = new Martha()
-       let program = martha.parse(
+       let program0 = martha.parse(
 `
 import core
 
 macro: foringenerator
-as $atom ($statement for $atom.reference in $atom.range):
-    $statement.bind $atom.reference $atom.range.current
-    emit(Generator, { 
-        next: $atom.range.next
-        current: $statement
+as $atom ($atom.reference for $atom.reference in $atom.range):
+    $atom.parent.bind $atom.reference $atom.range.current
+    emit(Generator, {
+        next = $atom.range.next
+        current = $statement
     })
-
+`       )
+        console.log(program0.macros[0].body)
+        martha.load(program0)
+        let program1 = martha.parse(
+`
 type:
 	Party
 is:
@@ -37,17 +41,16 @@ constructor:
     call(10)
     call(a(b(c(10, 90))))
     z = g => x => g ** x
-    j = u * 4 for u in 1..100
+    j = 4 * u for u in 1..1
 atomic void record(Array[]:items{.len > 0}, int:f{> 0}, bool:flag, ref Vector<string>:s)
     ledger.process(sum)
     total += f
 atomic int{> 0} send(Address:to, int:amount{> 0})
     do(bad(stuff[0].with("stuff".length)))
 
-`
-       )
-       console.log(program.types[1].methods[0].body[6].statement)
-       martha.load(program)
+`       )
+        console.log(program1.types[1].methods[0].body[6])
+        martha.load(program1)
    })
 });
 

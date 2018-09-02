@@ -434,21 +434,40 @@ class Exp extends WithParserContext {
     .yields(AST.atommember)
     ;
     /**
+     * MACRO INSERTION
+     */
+    atominsert:IRule[] = []
+    /**
      * cst producer
      */
-    subatom = rule(either(
+    subatom = rule(either(    
+        (input:Input) => {
+            //console.log("looking for insert", this.atominsert.length)
+            if (this.atominsert.length)
+                return rule(either(...this.atominsert))
+            else
+                return Result.fault(input)
+        },  
         this.atomlambdaliteral,
         oneormore(rule("(", optional(() => this.exprAinfix), ")").yields(AST.bracketparen)),
-        oneormore(rule(/\{[ \t]*/, optional(() => this.exprAinfix), /[ \t]*\}/).yields(AST.bracketcurly)),
+        oneormore(rule(
+            /\s*\{/, 
+            many(
+                this.context.ws.ANY_WS,
+                () => this.exprAinfix,
+                this.context.ws.ANY_WS
+            ),
+            /\s*\}/
+        ).yields(AST.bracketcurly)),
         oneormore(rule("[", () => this.exprAinfix, "]").yields(AST.bracketarray)),
         this.atomliteral,
-        this.atommember,        
+        this.atommember,  
     ))
-    atom                 = rule(
-                                    either(
-                                            rule(this.subatom, many(this.context.ws.space0ton, this.subatom)),
-                                            rule(this.context.ctx.peek("spec")).yields(AST.thisref),
-                                            ),
+    atom = rule(
+        either(  
+            rule(this.subatom, many(this.context.ws.space0ton, this.subatom)),
+            rule(this.context.ctx.peek("spec")).yields(AST.thisref),
+        ),
     )
     .yields(AST.atom)
     ;
@@ -506,7 +525,7 @@ class Stmt extends WithParserContext {
         this.context.ws.lr0ton("("),
         many(either(
             rule(this.context.ws.lr0ton(token("rulereference", /\$[a-z0-9\.]+/i))),//.yields(named("reference"))),
-            rule(this.context.ws.lr0ton(token("ruleword", /\w+/)).yields(named("word")))
+            rule(this.context.ws.lr0ton(token("ruleword", /\w+/)))//.yields(named("word")))
         )),
         this.context.ws.lr0ton(")"),
     )
@@ -634,8 +653,12 @@ class ParserContext {
     types: IRule;
     statements: IRule;
     program: IRule;
+
+    ruleRegistry:RuleReference[]
     
     constructor() {
+        this.ruleRegistry = []
+
         this.op = new Op()
         this.mcro = new Mcro()
 
@@ -672,20 +695,93 @@ class ParserContext {
             this.types,
         // Compilation.statements,
         )
+
+        // register built in rules
+        this.addRuleInternal({id:"$statement",
+            rule: rule(() => this.stmt.statement),
+            add: (r:IRule) => {
+                //
+                console.log("STATEMENT INSERT")
+            }
+        })
+        this.addRuleInternal({id:"$atom.reference",
+            rule: this.ref.member, 
+            add: (r:IRule) => {
+                //
+                console.log("ATOMREFERENCE INSERT")
+            }
+        })
+        this.addRuleInternal({id:"$atom.range", 
+            rule: this.exp.expr7infix,
+            add: (r:IRule) => {
+            //
+                console.log("ATOMRANGE INSERT")
+            }
+        })
+        this.addRuleInternal({id:"$atom", 
+            rule: this.exp.subatom,
+            add: (r:IRule) => {
+            //
+                console.log("ATOM INSERT")
+                this.exp.atominsert.push(r)
+            }
+        })
+    }
+  
+    // defs
+    private macroDefs:MacroDef[] = []
+
+    public getRuleAdder(id:string): (r:IRule) => void {
+        const rule = this.ruleRegistry.find(r => r.id === id)
+        if (rule) {
+            return rule.add
+        }
+        throw new Error(`No rule exists for ${id}. If this is a macro it must be imported.`)
     }
 
-    
+    public getRuleRef(id:string): IRule {
+        const rule = this.ruleRegistry.find(r => r.id == id)
+        if (rule && rule.rule) {
+            return rule.rule
+        }
+        throw new Error(`No rule exists for ${id}. If this is a macro it must be imported.`)
+    }
 
-    private macroDefs:MacroDef[] = []
-   // private macroImpls:MacroImpl[] = []
+    private addRuleInternal(ref:RuleReference):void {
+        this.ruleRegistry.push(ref)
+    }
+
+    public addRule(ref:RuleReference):void {
+        console.log("adding rule", ref)
+        this.ruleRegistry.push(ref)
+        const target = this.ruleRegistry.find(x => x.id == ref.targetRuleId)
+        console.log("target", ref.rule)
+        if (target && ref.rule) {
+            target.add(ref.rule)
+        }
+    }
 
     public addMacro(macro:MacroDef):void {
+        console.log("## VISIT MACRO")
         const identity = (x:MacroDef) => x.name
         if (this.macroDefs.find(x => identity(x) === identity(macro))) {
             throw new Error(`Macro ${identity(macro)} is already registered.`)
         }
-
+        let parts = macro.rule.map((t:string) => {
+            if (t.startsWith("$")) {
+                return this.getRuleRef(t)
+            } else {
+                return this.ws.lr0ton(token(t, t))
+            }
+        })
+        console.log(parts)
         this.macroDefs.push(macro)
+        this.addRule({
+            id: `$${macro.name}`,
+            targetRuleId: macro.as,
+            add: this.getRuleAdder(macro.as),
+            rule: rule(...parts).yields(AST.expandmacro(macro))
+        })
     }
 
     public parse(source:string):ProgramDef {
@@ -705,6 +801,13 @@ class ParserContext {
         )
         return program
     }
+}
+
+type RuleReference = {
+    id: string
+    targetRuleId?: string
+    rule?: IRule
+    add: (rule:IRule) => void
 }
 
 export {

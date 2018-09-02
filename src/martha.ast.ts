@@ -2,7 +2,7 @@
 import { Tibu, Result, ResultTokens, Input, IRule, IToken, Pattern, IRuleAction } from "tibu";
 const { parse, token, rule, all, many, optional, either } = Tibu;
 
-import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List, MacroDef, ImportDef, TypeDef, Lambda } from "./martha.emit";
+import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List, MacroDef, ImportDef, TypeDef, Lambda, Range } from "./martha.emit";
 import { Op, Mcro } from "./martha.grammar";
 const emit = Emit.Emit
 
@@ -90,11 +90,12 @@ class AST {
 
     static typedef(result:ResultTokens, cst:any):any {
         const fcst = flat(cst)
+        console.log("tn", fcst.filter(x => x.typename))
         let types:any[] = fcst
             .filter(x => x)
-            .filter(x => x.name)
+            .filter(x => x.typename)
             .map((name:any) => {
-                return [...name.name].map((name:string) => {
+                return name.typename.map((name:string) => {
                     let type:any = {
                         name
                     };
@@ -130,7 +131,7 @@ class AST {
 
     static typedef_name(result:ResultTokens, cst:any):any {
         return {
-            name: result.get("typename")
+            typename: result.get("typename")
         };
     }
 
@@ -335,6 +336,7 @@ class AST {
                     case op.careteq.__token__: return emit(CaretEq, { left, right})
                     case op.pipeeq.__token__: return emit(PipeEq, { left, right})
                     case op.powereq.__token__: return emit(PowerEq, { left, right})
+                    case op.range.__token__: return emit(Range, { left, right})
                 }
             }
             , flat(cst)[0]
@@ -394,16 +396,26 @@ class AST {
     }
 
     static macrodef(result:ResultTokens, cst:any):any {
-        console.log(JSON.stringify(flat(flat(named(cst, "as").cst)), null, 2))
-        let fcst = flat(cst)
-        let name = fcst.find(x => x.named === "macro").result.one("member") || fcst.find(x => x.named === "macro").result.one("string").match(/.(.*)./)[1]
-        let is = flat(fcst.find(x => x.named === "is").cst)[0].statement[0].name
-        let as = flat(fcst.find(x => x.named === "as").cst)
-        return emit(MacroDef, { name, as })
+        let fcst = flat(cst)        
+        let name = named(fcst, "macro").result.one("member") || named(fcst, "macro").result.one("string").match(/.(.*)./)[1]
+        let as = named(fcst, "as").result.one("insert")
+        let rule = named(fcst, "as").result.tokens.slice(1).map((t:any) => t.result.value)
+        let body = flat(named(fcst, "as").cst)
+
+        let macro = emit(MacroDef, { name, as, rule, body })
+        console.log(macro.body)
+        return macro
     }
 
     static importdef(result:ResultTokens, cst:any):any {
         return emit(ImportDef, { name: flat(cst).find(x => isa(Reference)(x)).name })
+    }
+
+    static expandmacro(macro:MacroDef):(result:ResultTokens, cst:any) => any {
+        return (result:ResultTokens, cst:any) => {
+            console.log("### TRAPPED MACRO", result, cst)
+            return 1
+        }
     }
 }
 

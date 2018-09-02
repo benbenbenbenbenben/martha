@@ -51,6 +51,7 @@ export class AmpEq extends Binary {}
 export class CaretEq extends Binary {} 
 export class PipeEq extends Binary {} 
 export class PowerEq extends Binary {} 
+export class Range extends Binary {}
 
 export class UnaryPrefix {
     value!: any

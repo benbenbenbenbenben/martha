@@ -408,14 +408,12 @@ describe("Def", () => {
         it('accepts macro: foringenerator', () => {
             // input
             let input = 
-`
-macro:
-    foringenerator
+`macro: foringenerator
 as $atom ($statement for $atom.reference in $atom.range):
     $statement.bind $atom.reference $atom.range.current
-    emit(Generator, { 
-        next: $atom.range.next
-        current: $statement
+    emit(Generator, {
+        next = $atom.range.next,
+        current = $statement
     })
 `    
             let proc = false
