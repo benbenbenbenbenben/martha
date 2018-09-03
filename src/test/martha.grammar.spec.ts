@@ -19,7 +19,7 @@ describe("types", () => {
      // type name
      describe("basic types", () => {
         it("should parse type name", () => {
-            expect(Tibu.parse(`Foo`)(Def.typedef_name)).to.deep.eq([{name:["Foo"]}]);
+            expect(Tibu.parse(`Foo`)(Def.typedef_name)).to.deep.eq([{typename:["Foo"]}]);
         });
         it("should parse a base type name", () => {
             expect(Tibu.parse(`Bar`)(Def.typedef_basetype)).to.deep.eq([{basetype:["Bar"]}]);
@@ -28,19 +28,24 @@ describe("types", () => {
             expect(Tibu.parse(`Type: Member`)(Def.typedef_member)).to.deep.eq([{members:[{type:"Type",name:"Member"}]}]);
         });
         it("should parse a type with a base type", () => {
-            expect(Tibu.parse(`type: Foo is: Bar`)(Def.typedef)).to.deep.eq([[{name:"Foo",basetype:"Bar"}]]);
+            expect(Tibu.parse(`type: Foo is: Bar`)(Def.typedef)).to.deep.eq([[{name:"Foo",basetype:"Bar",methods:[]}]]);
         });
         it("should parse a basic type", () => {
-            expect(Tibu.parse(`type: Foo`)(Def.typedef)).to.deep.eq([[ { name: "Foo" } ]]);
+            expect(Tibu.parse(`type: Foo`)(Def.typedef)).to.deep.eq([[ { name: "Foo", methods:[] } ]]);
         });
         it("should parse a basic type with a member variable", () => {
-            expect(Tibu.parse(`type: Foo is: Bar with:\n    Party: this`)(Def.typedef))
-            .to.deep.eq([[{name:"Foo",basetype: "Bar",members:[{type:"Party",name:"this"}]}]]);
+            expect(Tibu.parse(`type: Foo\nis: Bar with:\n    Party: this`)(Def.typedef))
+            .to.deep.eq([[{name:"Foo",basetype: "Bar", methods:[], members:[{type:"Party",name:"this"}]}]]);
         });
         it("should parse a 1+n type with member variables", () => {
             expect(Tibu.parse(`type: Foo, Bar is: Base with:\n    Addr: addr0, addr1`)(Def.typedefs)).to.deep.eq(
                 [[
-                    {name:"Foo", basetype:"Base", members:[{type:"Addr",name:"addr0"},{type:"Addr",name:"addr1"}]}
+                    {
+                        name:"Foo", basetype:"Base", methods:[], members:[{type:"Addr",name:"addr0"},{type:"Addr",name:"addr1"}]
+                    },
+                    {
+                        name:"Bar", basetype:"Base", methods:[], members:[{type:"Addr",name:"addr0"},{type:"Addr",name:"addr1"}]
+                    }
                 ]]
             );});
         });

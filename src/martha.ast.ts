@@ -90,7 +90,6 @@ class AST {
 
     static typedef(result:ResultTokens, cst:any):any {
         const fcst = flat(cst)
-        console.log("tn", fcst.filter(x => x.typename))
         let types:any[] = fcst
             .filter(x => x)
             .filter(x => x.typename)

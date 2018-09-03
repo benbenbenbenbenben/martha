@@ -267,11 +267,11 @@ class Op {
      */
     get sorted7_binary(): IToken[] {
         return [
+            this.ampamp,
             this.amp,
             this.caret,
-            this.pipe,
-            this.ampamp,
             this.pipepipe,
+            this.pipe,
             this.range, // TODO: consider, range operator should be 8th not 7th
         ]
     }
@@ -307,7 +307,7 @@ class Val extends WithParserContext {
     }
     bool         = token("bool", /true|false/);
     integer      = token("integer", /[\d]+/);
-    str          = token("string", /"[^"]+"|'[^']+'/);
+    str          = token("string", /"[^"]*"|'[^']*'/);
 
     get anyliteral():any {
         return either(this.bool, this.integer, this.str);
@@ -357,7 +357,7 @@ class Ref extends WithParserContext {
     varname      = token("varname", /[a-z_\$\@][a-z0-9\$\@]*/i);
     member       = rule(this._member, many(this.context.op.dot, this._member))
                             .yields(AST.reference);
-    typename     = token("typename", /[a-z_\$\@][a-z0-9\$\@]*/i);
+    typename     = token("typename", /[a-z_\$\@][a-z0-9\$\@]*(\[\])*/i);
 }
 class Ws extends WithParserContext {
     constructor(context:ParserContext) {
@@ -408,7 +408,7 @@ class Util extends WithParserContext {
     block            = (begin:Pattern, repeat:Pattern) => rule(
         begin, /[ \t]*:[ \t]*/,
         either(
-            all(this.pushIndent, many(repeat, either(this.peekIndent, this.popIndent, this.EOF))),
+            all(this.pushIndent, repeat, many(this.peekIndent, repeat), either(this.EOF, this.popIndent)),
             all(repeat, /\s*/),
             all(repeat, this.EOF),
             all(this.EOF),
@@ -424,8 +424,9 @@ class Exp extends WithParserContext {
     ;    
     atomlambdaliteral    = rule(
         rule(either(
-            //all("(", () => this.context.def.argumentdefs, ")",),
-            //() => this.context.def.argumentdef,
+            all("(", () => this.context.def.argumentdefs, ")",),
+            all("(", optional(this.context.ref._member, many(this.context.op.infix_comma, this.context.ref._member)), ")",),
+            () => this.context.def.argumentdef,
             this.context.ref._member
         )).yields(named("spec")), this.context.ws.lr0ton("=>"), rule(() => this.context.stmt.statement).yields(named("body")))
     .yields(AST.atomlambdaliteral)
@@ -441,6 +442,7 @@ class Exp extends WithParserContext {
      * cst producer
      */
     subatom = rule(either(    
+         /**/
         (input:Input) => {
             //console.log("looking for insert", this.atominsert.length)
             if (this.atominsert.length)
@@ -448,20 +450,21 @@ class Exp extends WithParserContext {
             else
                 return Result.fault(input)
         },  
+
         this.atomlambdaliteral,
         oneormore(rule("(", optional(() => this.exprAinfix), ")").yields(AST.bracketparen)),
         oneormore(rule(
-            /\s*\{/, 
+            /[ \t]*\{/, 
             many(
                 this.context.ws.ANY_WS,
                 () => this.exprAinfix,
                 this.context.ws.ANY_WS
             ),
-            /\s*\}/
+            /[ \t]*\}/
         ).yields(AST.bracketcurly)),
-        oneormore(rule("[", () => this.exprAinfix, "]").yields(AST.bracketarray)),
+        oneormore(rule("[", optional(() => this.exprAinfix), "]").yields(AST.bracketarray)), 
         this.atomliteral,
-        this.atommember,  
+        this.atommember,
     ))
     atom = rule(
         either(  
@@ -550,7 +553,7 @@ class Def extends WithParserContext {
     )
     .yields(AST.argumentsspec)
     ;
-    argumentdef = rule(this.context.ws.lr0ton(this.context.ref.typename), ":", this.context.ws.lr0ton(this.context.ref.varname), optional(this.argumentspec))
+    argumentdef = rule(optional(this.context.op.splat), this.context.ws.lr0ton(this.context.ref.typename), ":", this.context.ws.lr0ton(this.context.ref.varname), optional(this.argumentspec))
     .yields(AST.argumentdef)
     ;
     returndef = rule(this.context.ref.typename, optional(this.argumentspec))
@@ -616,7 +619,9 @@ class Def extends WithParserContext {
     typedef_name = rule(this.context.ref.typename, many(this.context.op.infix_comma, this.context.ref.typename))
     .yields(AST.typedef_name)
     ;
-    typedef_member = rule(this.context.ref.typename, this.context.op.infix_colon, this.membernames)
+    typedef_member = rule(this.context.ref.typename, this.context.op.infix_colon, this.membernames, 
+        optional(this.context.ws.lr0ton(this.context.op.assign), this.context.exp.subatom)
+    )
     .yields(AST.typedef_member)
     ;
     typedef_basetype = rule(this.context.ref.typename)
