@@ -245,11 +245,11 @@ class Op {
      */
     get sorted7_binary() {
         return [
+            this.ampamp,
             this.amp,
             this.caret,
-            this.pipe,
-            this.ampamp,
             this.pipepipe,
+            this.pipe,
             this.range,
         ];
     }
@@ -284,7 +284,7 @@ class Val extends WithParserContext {
         super(context);
         this.bool = token("bool", /true|false/);
         this.integer = token("integer", /[\d]+/);
-        this.str = token("string", /"[^"]+"|'[^']+'/);
+        this.str = token("string", /"[^"]*"|'[^']*'/);
     }
     get anyliteral() {
         return either(this.bool, this.integer, this.str);
@@ -298,6 +298,9 @@ class Kwrd {
         this.private = token("private", /private/);
         this.internal = token("internal", /internal/);
         this.protected = token("protected", /protected/);
+        this.export = token("export", "export");
+        this.extern = token("extern", "extern");
+        this.abstract = token("abstract", "abstract");
         this.async = token("async", /async/);
         this.atomic = token("atomic", /atomic/);
         this.critical = token("critical", /critical/);
@@ -307,6 +310,7 @@ class Kwrd {
         this.when = "when";
         this.use = "use";
         this.type = "type";
+        this.interface = "interface";
         this.is = "is";
         this.as = "as";
         this.with = "with";
@@ -335,8 +339,10 @@ class Ws extends WithParserContext {
         super(context);
         this.space0ton = /[ \t]*/;
         this.space1ton = /[ \t]+/;
-        this.newline = /\r\n|\r|\n|\n\r/;
+        this.newline = /\r\n|\r|\n\r|\n/;
         this.indent = token("indent", /^[ \t]+/);
+        this.emptyline = rule(/\s*$/, this.newline);
+        this.emptylines = rule(many(this.emptyline));
         this.IND = rule(this.newline, this.indent).yields(function (result) {
             this._indent = result.tokens[0].result.value;
         });
@@ -359,7 +365,8 @@ class Util extends WithParserContext {
         super(context);
         this.indents = [];
         this.pushIndent = rule(this.context.ws.space0ton, this.context.ws.newline, this.context.ws.indent).yields((r) => {
-            this.indents.push(r.tokens[0].result.value);
+            console.log(r.one("indent").length);
+            this.indents.push(r.one("indent"));
         });
         this.peekIndent = rule(this.context.ws.newline, (input) => {
             let index = input.source.substring(input.location).indexOf(this.indents[this.indents.length - 1]);
@@ -369,13 +376,13 @@ class Util extends WithParserContext {
             }
             return tibu_1.Result.fault(input);
         });
-        this.popIndent = rule(this.context.ws.newline, (input) => {
+        this.popIndent = rule((input) => {
             this.indents.pop();
             return tibu_1.Result.pass(input);
         });
         this.EOF = rule((input) => input.location === input.source.length ?
             tibu_1.Result.pass(input) : tibu_1.Result.fault(input));
-        this.block = (begin, repeat) => rule(begin, /[ \t]*:[ \t]*/, either(all(this.pushIndent, many(repeat, either(this.peekIndent, this.popIndent, this.EOF))), all(repeat, /\s*/), all(repeat, this.EOF), all(this.EOF)));
+        this.block = (begin, repeat) => rule(begin, /[ \t]*:[ \t]*/, either(all(this.pushIndent, repeat, many(this.peekIndent, repeat), this.popIndent), all(repeat, /\s*/), all(repeat, this.EOF), all(optional(/\s*/), this.EOF)));
     }
 }
 exports.Util = Util;
@@ -384,17 +391,26 @@ class Exp extends WithParserContext {
         super(context);
         this.atomliteral = rule(this.context.val.anyliteral)
             .yields(martha_ast_1.AST.atomliteral);
-        this.atomlambdaliteral = rule(rule(either(
-        //all("(", () => this.context.def.argumentdefs, ")",),
-        //() => this.context.def.argumentdef,
-        this.context.ref._member)).yields(named("spec")), this.context.ws.lr0ton("=>"), rule(() => this.context.stmt.statement).yields(named("body")))
+        this.atomlambdaliteral = rule(rule(either(all("(", () => this.context.def.argumentdefs, ")"), all("(", optional(this.context.ref._member, many(this.context.op.infix_comma, this.context.ref._member)), ")"), () => this.context.def.argumentdef, this.context.ref._member)).yields(named("spec")), this.context.ws.lr0ton("=>"), rule(() => this.context.stmt.statement).yields(named("body")))
             .yields(martha_ast_1.AST.atomlambdaliteral);
         this.atommember = rule(this.context.ref.member)
             .yields(martha_ast_1.AST.atommember);
         /**
+         * MACRO INSERTION
+         */
+        this.atominsert = [];
+        /**
          * cst producer
          */
-        this.subatom = rule(either(this.atomlambdaliteral, oneormore(rule("(", optional(() => this.exprAinfix), ")").yields(martha_ast_1.AST.bracketparen)), oneormore(rule(/\{[ \t]*/, optional(() => this.exprAinfix), /[ \t]*\}/).yields(martha_ast_1.AST.bracketcurly)), oneormore(rule("[", () => this.exprAinfix, "]").yields(martha_ast_1.AST.bracketarray)), this.atomliteral, this.atommember));
+        this.subatom = rule(either(
+        /**/
+        (input) => {
+            //console.log("looking for insert", this.atominsert.length)
+            if (this.atominsert.length)
+                return rule(either(...this.atominsert));
+            else
+                return tibu_1.Result.fault(input);
+        }, this.atomlambdaliteral, oneormore(rule("(", optional(() => this.exprAinfix), ")").yields(martha_ast_1.AST.bracketparen)), oneormore(rule(/[ \t]*\{/, many(this.context.ws.ANY_WS, () => this.exprAinfix, this.context.ws.ANY_WS), /[ \t]*\}/).yields(martha_ast_1.AST.bracketcurly)), oneormore(rule("[", optional(() => this.exprAinfix), "]").yields(martha_ast_1.AST.bracketarray)), this.atomliteral, this.atommember));
         this.atom = rule(either(rule(this.subatom, many(this.context.ws.space0ton, this.subatom)), rule(this.context.ctx.peek("spec")).yields(martha_ast_1.AST.thisref)))
             .yields(martha_ast_1.AST.atom);
         /**
@@ -422,6 +438,9 @@ class Stmt extends WithParserContext {
         // rule(this.context.exp.exprAinfix, Ws.space1ton, () => Stmt.statement).yields(AST.calluser),
         many(this.context.exp.exprAinfix, optional(this.context.ctx.clear()))))
             .yields(martha_ast_1.AST.statement);
+        this.macrospecification = rule(token("insert", /\$\w+/), this.context.ws.lr0ton("("), many(either(rule(this.context.ws.lr0ton(token("rulereference", /\$[a-z0-9\.]+/i))), //.yields(named("reference"))),
+        rule(this.context.ws.lr0ton(token("ruleword", /\w+/))) //.yields(named("word")))
+        )), this.context.ws.lr0ton(")"));
     }
 }
 exports.Stmt = Stmt;
@@ -431,15 +450,16 @@ class Def extends WithParserContext {
         this.argumentspec = rule("{", this.context.ctx.push("spec"), this.context.stmt.statement, "}" //, this.context.ctx.pop("spec")
         )
             .yields(martha_ast_1.AST.argumentsspec);
-        this.argumentdef = rule(this.context.ws.lr0ton(this.context.ref.typename), ":", this.context.ws.lr0ton(this.context.ref.varname), optional(this.argumentspec))
+        this.argumentdef = rule(optional(this.context.op.splat), this.context.ws.lr0ton(this.context.ref.typename), many(this.context.ws.lr0ton(this.context.ref.typename)), ":", this.context.ws.lr0ton(this.context.ref.varname), optional(this.argumentspec))
             .yields(martha_ast_1.AST.argumentdef);
         this.returndef = rule(this.context.ref.typename, optional(this.argumentspec))
             .yields(martha_ast_1.AST.returndef);
         this.argumentdefs = rule(this.argumentdef, many(this.context.op.infix_comma, this.argumentdef))
             .yields(martha_ast_1.AST.argumentdefs);
-        this.methoddef = rule(this.context.util.block(all(optional(rule(this.context.kwrd.anyaccess, many(this.context.ws.space1ton, this.context.kwrd.anyaccess), this.context.ws.space1ton).yields(martha_ast_1.AST.anyaccess)), optional(this.context.kwrd.static, this.context.ws.space1ton), optional(this.context.kwrd.async, this.context.ws.space1ton), optional(this.context.kwrd.atomic, this.context.ws.space1ton), optional(this.context.kwrd.critical, this.context.ws.space1ton), either(all(this.returndef, this.context.ws.space1ton, token("name", /\w+/)), this.context.kwrd.ctor), optional(this.context.ws.lr0ton(this.context.op.lparen), optional(this.argumentdefs), this.context.ws.lr0ton(this.context.op.rparen))), many(this.context.stmt.statement)))
+        this.methoddef = rule(this.context.util.block(all(optional(rule(this.context.kwrd.anyaccess, many(this.context.ws.space1ton, this.context.kwrd.anyaccess), this.context.ws.space1ton).yields(martha_ast_1.AST.anyaccess)), optional(this.context.kwrd.abstract, this.context.ws.space1ton), optional(this.context.kwrd.export, this.context.ws.space1ton), optional(this.context.kwrd.extern, this.context.ws.space1ton), optional(this.context.kwrd.static, this.context.ws.space1ton), optional(this.context.kwrd.async, this.context.ws.space1ton), optional(this.context.kwrd.atomic, this.context.ws.space1ton), optional(this.context.kwrd.critical, this.context.ws.space1ton), either(all(this.returndef, this.context.ws.space1ton, token("name", /\w+/)), this.context.kwrd.ctor), optional(this.context.ws.lr0ton(this.context.op.lparen), optional(this.argumentdefs), this.context.ws.lr0ton(this.context.op.rparen))), this.context.stmt.statement))
             .yields(martha_ast_1.AST.methoddef);
-        this.macrodef = rule(rule(this.context.util.block(this.context.kwrd.macro, either(this.context.ref._member, this.context.val.str))).yields(named("macro")), rule(this.context.util.block(this.context.kwrd.is, this.context.stmt.statement)).yields(named("is")), rule(this.context.util.block(this.context.kwrd.as, this.context.stmt.statement)).yields(named("as")))
+        this.methoddec = rule(optional(rule(this.context.kwrd.anyaccess, many(this.context.ws.space1ton, this.context.kwrd.anyaccess), this.context.ws.space1ton).yields(martha_ast_1.AST.anyaccess)), optional(this.context.kwrd.export, this.context.ws.space1ton), optional(this.context.kwrd.extern, this.context.ws.space1ton), optional(this.context.kwrd.static, this.context.ws.space1ton), optional(this.context.kwrd.async, this.context.ws.space1ton), optional(this.context.kwrd.atomic, this.context.ws.space1ton), optional(this.context.kwrd.critical, this.context.ws.space1ton), either(all(this.returndef, this.context.ws.space1ton, token("name", /\w+/)), this.context.kwrd.ctor), optional(this.context.ws.lr0ton(this.context.op.lparen), optional(this.argumentdefs), this.context.ws.lr0ton(this.context.op.rparen)));
+        this.macrodef = rule(rule(this.context.util.block(this.context.kwrd.macro, either(this.context.ref._member, this.context.val.str))).yields(named("macro")), rule(this.context.util.block(rule(this.context.kwrd.as, this.context.ws.space1ton, this.context.stmt.macrospecification), this.context.stmt.statement)).yields(named("as")))
             .yields(martha_ast_1.AST.macrodef);
         this.macrodefs = rule(many(this.macrodef, optional(this.context.ws.ANY_WS)))
             .yields(martha_ast_1.AST.flatcst);
@@ -453,11 +473,15 @@ class Def extends WithParserContext {
             .yields(martha_ast_1.AST.flatcst);
         this.typedef_name = rule(this.context.ref.typename, many(this.context.op.infix_comma, this.context.ref.typename))
             .yields(martha_ast_1.AST.typedef_name);
-        this.typedef_member = rule(this.context.ref.typename, this.context.op.infix_colon, this.membernames)
+        this.typedef_type = rule(this.context.ref.typename, many(this.context.ws.lr0ton(this.context.ref.typename)), 
+        // TODO: generic
+        // indexer
+        optional(this.context.op.lsquare, optional(either(() => this.typedef_type, all(this.context.ref.typename, many(this.context.ws.lr0ton(this.context.ref.typename))))), this.context.op.rsquare));
+        this.typedef_member = rule(this.typedef_type, this.context.op.infix_colon, this.membernames, optional(this.context.ws.lr0ton(this.context.op.assign), this.context.exp.subatom))
             .yields(martha_ast_1.AST.typedef_member);
         this.typedef_basetype = rule(this.context.ref.typename)
             .yields(martha_ast_1.AST.typedef_basetype);
-        this.typedef = rule(this.context.util.block(this.context.kwrd.type, this.typedef_name), optional(this.context.util.block(this.context.kwrd.is, this.typedef_basetype)), optional(this.context.util.block(this.context.kwrd.with, this.typedef_member)), many(this.methoddef))
+        this.typedef = rule(this.context.util.block(rule(this.context.kwrd.type, this.context.ws.space1ton, this.typedef_name), rule(optional(this.context.util.block(this.context.kwrd.is, this.typedef_basetype)), many(this.typedef_member), many(this.methoddef))))
             .yields(martha_ast_1.AST.typedef);
         this.typedefs = rule(many(this.typedef, optional(this.context.ws.ANY_WS)))
             .yields(martha_ast_1.AST.flatcst);
@@ -466,7 +490,9 @@ class Def extends WithParserContext {
 exports.Def = Def;
 class ParserContext {
     constructor() {
+        // defs
         this.macroDefs = [];
+        this.ruleRegistry = [];
         this.op = new Op();
         this.mcro = new Mcro();
         this.ctx = new Ctx(this);
@@ -483,13 +509,85 @@ class ParserContext {
         this.types = rule(optional(this.def.typedefs));
         this.statements = rule(many(this.stmt.statement));
         this.program = rule(this.ws.ANY_WS, this.imports, this.macros, this.types);
+        // register built in rules
+        this.addRuleInternal({ id: "$statement",
+            rule: rule(() => this.stmt.statement),
+            add: (r) => {
+                //
+                console.log("STATEMENT INSERT");
+            }
+        });
+        this.addRuleInternal({ id: "$atom.reference",
+            rule: this.ref.member,
+            add: (r) => {
+                //
+                console.log("ATOMREFERENCE INSERT");
+            }
+        });
+        this.addRuleInternal({ id: "$atom.range",
+            rule: this.exp.expr7infix,
+            add: (r) => {
+                //
+                console.log("ATOMRANGE INSERT");
+            }
+        });
+        this.addRuleInternal({ id: "$atom",
+            rule: this.exp.subatom,
+            add: (r) => {
+                //
+                console.log("ATOM INSERT");
+                this.exp.atominsert.push(r);
+            }
+        });
     }
-    // private macroImpls:MacroImpl[] = []
-    addMacro(macro) {
-        if (this.macroDefs.find(x => x.identity === macro.identity)) {
-            throw new Error(`Macro ${macro.identity} is already registered.`);
+    getRuleAdder(id) {
+        const rule = this.ruleRegistry.find(r => r.id === id);
+        if (rule) {
+            return rule.add;
         }
+        throw new Error(`No rule exists for ${id}. If this is a macro it must be imported.`);
+    }
+    getRuleRef(id) {
+        const rule = this.ruleRegistry.find(r => r.id == id);
+        if (rule && rule.rule) {
+            return rule.rule;
+        }
+        throw new Error(`No rule exists for ${id}. If this is a macro it must be imported.`);
+    }
+    addRuleInternal(ref) {
+        this.ruleRegistry.push(ref);
+    }
+    addRule(ref) {
+        console.log("adding rule", ref);
+        this.ruleRegistry.push(ref);
+        const target = this.ruleRegistry.find(x => x.id == ref.targetRuleId);
+        console.log("target", ref.rule);
+        if (target && ref.rule) {
+            target.add(ref.rule);
+        }
+    }
+    addMacro(macro) {
+        console.log("## VISIT MACRO");
+        const identity = (x) => x.name;
+        if (this.macroDefs.find(x => identity(x) === identity(macro))) {
+            throw new Error(`Macro ${identity(macro)} is already registered.`);
+        }
+        let parts = macro.rule.map((t) => {
+            if (t.startsWith("$")) {
+                return this.getRuleRef(t);
+            }
+            else {
+                return this.ws.lr0ton(token(t, t));
+            }
+        });
+        console.log(parts);
         this.macroDefs.push(macro);
+        this.addRule({
+            id: `$${macro.name}`,
+            targetRuleId: macro.as,
+            add: this.getRuleAdder(macro.as),
+            rule: rule(...parts).yields(martha_ast_1.AST.expandmacro(macro))
+        });
     }
     parse(source) {
         let program = new martha_program_1.ProgramDef();

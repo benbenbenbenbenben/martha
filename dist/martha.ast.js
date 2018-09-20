@@ -49,7 +49,7 @@ class AST {
     }
     static argumentdef(result, cst) {
         return emit(martha_emit_1.ArgumentDef, {
-            type: result.one("typename"),
+            type: result.get("typename"),
             name: result.one("varname"),
             spec: cst ? flat(flat(cst).filter(isa(martha_emit_1.Statement)).map(x => x.statement)) : [],
         });
@@ -67,9 +67,12 @@ class AST {
         });
     }
     static methoddef(result, cst) {
+        console.log(21);
         return emit(martha_emit_1.MethodDef, {
             name: result.one("ctor") || result.one("name"),
             access: cst && flat(cst).find(x => x instanceof martha_emit_1.MethodAccess),
+            export: result.get("export") !== null,
+            extern: result.get("extern") !== null,
             async: result.get("async") !== null,
             atomic: result.get("atomic") !== null,
             critical: result.get("critical") !== null,
@@ -82,9 +85,9 @@ class AST {
         const fcst = flat(cst);
         let types = fcst
             .filter(x => x)
-            .filter(x => x.name)
+            .filter(x => x.typename)
             .map((name) => {
-            return [...name.name].map((name) => {
+            return name.typename.map((name) => {
                 let type = {
                     name
                 };
@@ -109,7 +112,7 @@ class AST {
                 .filter(x => isa(martha_emit_1.Reference)(x))
                 .map(x => {
                 return {
-                    type: result.one("typename"),
+                    type: result.get("typename"),
                     name: x.name
                 };
             })
@@ -117,7 +120,7 @@ class AST {
     }
     static typedef_name(result, cst) {
         return {
-            name: result.get("typename")
+            typename: result.get("typename")
         };
     }
     static typedef_basetype(result, cst) {
@@ -260,7 +263,7 @@ class AST {
         }
         return flat(cst).slice(1).reduce((left, right) => {
             let op = new martha_grammar_1.Op();
-            switch (result.tokens[0].name) {
+            switch (result.tokens.shift().name) {
                 case op.dot.__token__: return (isa(martha_emit_1.Reference)(left) && isa(martha_emit_1.Reference)(right))
                     ? emit(martha_emit_1.Reference, { name: `${left.name}.${right.name}` })
                     : emit(martha_emit_1.Dot, { left, right });
@@ -295,6 +298,7 @@ class AST {
                 case op.careteq.__token__: return emit(martha_emit_1.CaretEq, { left, right });
                 case op.pipeeq.__token__: return emit(martha_emit_1.PipeEq, { left, right });
                 case op.powereq.__token__: return emit(martha_emit_1.PowerEq, { left, right });
+                case op.range.__token__: return emit(martha_emit_1.Range, { left, right });
             }
         }, flat(cst)[0]);
     }
@@ -348,13 +352,22 @@ class AST {
     }
     static macrodef(result, cst) {
         let fcst = flat(cst);
-        let name = fcst.find(x => x.named === "macro").result.one("member") || fcst.find(x => x.named === "macro").result.one("string").match(/.(.*)./)[1];
-        let is = flat(fcst.find(x => x.named === "is").cst)[0].statement[0].name;
-        let as = flat(fcst.find(x => x.named === "as").cst);
-        return emit(martha_emit_1.MacroDef, { name, as });
+        let name = named(fcst, "macro").result.one("member") || named(fcst, "macro").result.one("string").match(/.(.*)./)[1];
+        let as = named(fcst, "as").result.one("insert");
+        let rule = named(fcst, "as").result.tokens.slice(1).map((t) => t.result.value);
+        let body = flat(named(fcst, "as").cst);
+        let macro = emit(martha_emit_1.MacroDef, { name, as, rule, body });
+        console.log(macro.body);
+        return macro;
     }
     static importdef(result, cst) {
         return emit(martha_emit_1.ImportDef, { name: flat(cst).find(x => isa(martha_emit_1.Reference)(x)).name });
+    }
+    static expandmacro(macro) {
+        return (result, cst) => {
+            console.log("### TRAPPED MACRO", result, cst);
+            return 1;
+        };
     }
 }
 exports.AST = AST;

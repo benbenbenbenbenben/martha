@@ -17,7 +17,7 @@ describe("types", () => {
     // type name
     describe("basic types", () => {
         it("should parse type name", () => {
-            chai_1.expect(tibu_1.Tibu.parse(`Foo`)(Def.typedef_name)).to.deep.eq([{ name: ["Foo"] }]);
+            chai_1.expect(tibu_1.Tibu.parse(`Foo`)(Def.typedef_name)).to.deep.eq([{ typename: ["Foo"] }]);
         });
         it("should parse a base type name", () => {
             chai_1.expect(tibu_1.Tibu.parse(`Bar`)(Def.typedef_basetype)).to.deep.eq([{ basetype: ["Bar"] }]);
@@ -26,18 +26,23 @@ describe("types", () => {
             chai_1.expect(tibu_1.Tibu.parse(`Type: Member`)(Def.typedef_member)).to.deep.eq([{ members: [{ type: "Type", name: "Member" }] }]);
         });
         it("should parse a type with a base type", () => {
-            chai_1.expect(tibu_1.Tibu.parse(`type: Foo is: Bar`)(Def.typedef)).to.deep.eq([[{ name: "Foo", basetype: "Bar" }]]);
+            chai_1.expect(tibu_1.Tibu.parse(`type: Foo is: Bar`)(Def.typedef)).to.deep.eq([[martha_emit_1.Emit.Emit(martha_emit_1.TypeDef, { name: "Foo", basetype: "Bar", methods: [] })]]);
         });
         it("should parse a basic type", () => {
-            chai_1.expect(tibu_1.Tibu.parse(`type: Foo`)(Def.typedef)).to.deep.eq([[{ name: "Foo" }]]);
+            chai_1.expect(tibu_1.Tibu.parse(`type: Foo`)(Def.typedef)).to.deep.eq([[martha_emit_1.Emit.Emit(martha_emit_1.TypeDef, { name: "Foo", methods: [] })]]);
         });
         it("should parse a basic type with a member variable", () => {
-            chai_1.expect(tibu_1.Tibu.parse(`type: Foo is: Bar with:\n    Party: this`)(Def.typedef))
-                .to.deep.eq([[{ name: "Foo", basetype: "Bar", members: [{ type: "Party", name: "this" }] }]]);
+            chai_1.expect(tibu_1.Tibu.parse(`type: Foo\nis: Bar with:\n    Party: this`)(Def.typedef))
+                .to.deep.eq([[{ name: "Foo", basetype: "Bar", methods: [], members: [{ type: "Party", name: "this" }] }]]);
         });
         it("should parse a 1+n type with member variables", () => {
             chai_1.expect(tibu_1.Tibu.parse(`type: Foo, Bar is: Base with:\n    Addr: addr0, addr1`)(Def.typedefs)).to.deep.eq([[
-                    { name: "Foo", basetype: "Base", members: [{ type: "Addr", name: "addr0" }, { type: "Addr", name: "addr1" }] }
+                    {
+                        name: "Foo", basetype: "Base", methods: [], members: [{ type: "Addr", name: "addr0" }, { type: "Addr", name: "addr1" }]
+                    },
+                    {
+                        name: "Bar", basetype: "Base", methods: [], members: [{ type: "Addr", name: "addr0" }, { type: "Addr", name: "addr1" }]
+                    }
                 ]]);
         });
     });
@@ -398,13 +403,12 @@ describe("Def", () => {
         });
         it('accepts macro: foringenerator', () => {
             // input
-            let input = `
-macro: foringenerator
+            let input = `macro: foringenerator
 as $atom ($statement for $atom.reference in $atom.range):
     $statement.bind $atom.reference $atom.range.current
-    emit(Generator, { 
-        next: $atom.range.next
-        current: $statement
+    emit(Generator, {
+        next = $atom.range.next,
+        current = $statement
     })
 `;
             let proc = false;
@@ -413,7 +417,7 @@ as $atom ($statement for $atom.reference in $atom.range):
                 chai_1.expect(flat(c)).to.deep.eq([{}]);
                 proc = true;
             };
-            parse(input)(rule().yields(output));
+            parse(input)(rule(Def.macrodef).yields(output));
             chai_1.expect(proc).to.be.eq(true);
         });
     });
@@ -422,16 +426,16 @@ describe('Exp', () => {
     describe("exp", () => {
         it('accepts x + y * x / w - q', () => {
             // input
-            let input = 'x + y * x / w - q';
+            let input = 'g + y * x / w - q';
             let proc = false;
             // output
             let output = (r, c) => {
                 chai_1.expect(flat(c)).to.deep.eq([
-                    { statement: [
+                    { __TYPE__: "Statement", statement: [
                             martha_emit_1.Emit.Emit(martha_emit_1.Minus, {
                                 left: martha_emit_1.Emit.Emit(martha_emit_1.Plus, {
-                                    left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "x" }),
-                                    right: martha_emit_1.Emit.Emit(martha_emit_1.Plus, {
+                                    left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "g" }),
+                                    right: martha_emit_1.Emit.Emit(martha_emit_1.Div, {
                                         left: martha_emit_1.Emit.Emit(martha_emit_1.Mult, {
                                             left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "y" }),
                                             right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "x" }),

@@ -1,191 +1,385 @@
 "use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-class MethodAccess {
+function serializable(ctor) {
+    return class extends ctor {
+        constructor() {
+            super(...arguments);
+            this.__TYPE__ = ctor.name;
+        }
+    };
+}
+let MethodAccess = class MethodAccess {
     constructor() {
         this.ispublic = false;
         this.isprivate = false;
         this.isprotected = false;
         this.isinternal = false;
     }
-}
+};
+MethodAccess = __decorate([
+    serializable
+], MethodAccess);
 exports.MethodAccess = MethodAccess;
-class Reference {
+let Reference = class Reference {
     constructor() {
         this.name = "";
     }
-}
+};
+Reference = __decorate([
+    serializable
+], Reference);
 exports.Reference = Reference;
-class Literal {
+let Literal = class Literal {
     constructor() {
         this.type = "";
         this.value = "";
     }
-}
+};
+Literal = __decorate([
+    serializable
+], Literal);
 exports.Literal = Literal;
-class Binary {
-}
+let Binary = class Binary {
+};
+Binary = __decorate([
+    serializable
+], Binary);
 exports.Binary = Binary;
-class Dot extends Binary {
-}
+let Dot = class Dot extends Binary {
+};
+Dot = __decorate([
+    serializable
+], Dot);
 exports.Dot = Dot;
-class Mult extends Binary {
-}
+let Mult = class Mult extends Binary {
+};
+Mult = __decorate([
+    serializable
+], Mult);
 exports.Mult = Mult;
-class Power extends Binary {
-}
+let Power = class Power extends Binary {
+};
+Power = __decorate([
+    serializable
+], Power);
 exports.Power = Power;
-class Div extends Binary {
-}
+let Div = class Div extends Binary {
+};
+Div = __decorate([
+    serializable
+], Div);
 exports.Div = Div;
-class Mod extends Binary {
-}
+let Mod = class Mod extends Binary {
+};
+Mod = __decorate([
+    serializable
+], Mod);
 exports.Mod = Mod;
-class Plus extends Binary {
-}
+let Plus = class Plus extends Binary {
+};
+Plus = __decorate([
+    serializable
+], Plus);
 exports.Plus = Plus;
-class Minus extends Binary {
-}
+let Minus = class Minus extends Binary {
+};
+Minus = __decorate([
+    serializable
+], Minus);
 exports.Minus = Minus;
-class ShiftLeft extends Binary {
-}
+let ShiftLeft = class ShiftLeft extends Binary {
+};
+ShiftLeft = __decorate([
+    serializable
+], ShiftLeft);
 exports.ShiftLeft = ShiftLeft;
-class ShiftRight extends Binary {
-}
+let ShiftRight = class ShiftRight extends Binary {
+};
+ShiftRight = __decorate([
+    serializable
+], ShiftRight);
 exports.ShiftRight = ShiftRight;
-class Lt extends Binary {
-}
+let Lt = class Lt extends Binary {
+};
+Lt = __decorate([
+    serializable
+], Lt);
 exports.Lt = Lt;
-class Lte extends Binary {
-}
+let Lte = class Lte extends Binary {
+};
+Lte = __decorate([
+    serializable
+], Lte);
 exports.Lte = Lte;
-class Gt extends Binary {
-}
+let Gt = class Gt extends Binary {
+};
+Gt = __decorate([
+    serializable
+], Gt);
 exports.Gt = Gt;
-class Gte extends Binary {
-}
+let Gte = class Gte extends Binary {
+};
+Gte = __decorate([
+    serializable
+], Gte);
 exports.Gte = Gte;
-class EqEq extends Binary {
-}
+let EqEq = class EqEq extends Binary {
+};
+EqEq = __decorate([
+    serializable
+], EqEq);
 exports.EqEq = EqEq;
-class NotEq extends Binary {
-}
+let NotEq = class NotEq extends Binary {
+};
+NotEq = __decorate([
+    serializable
+], NotEq);
 exports.NotEq = NotEq;
-class Amp extends Binary {
-}
+let Amp = class Amp extends Binary {
+};
+Amp = __decorate([
+    serializable
+], Amp);
 exports.Amp = Amp;
-class Caret extends Binary {
-}
+let Caret = class Caret extends Binary {
+};
+Caret = __decorate([
+    serializable
+], Caret);
 exports.Caret = Caret;
-class Pipe extends Binary {
-}
+let Pipe = class Pipe extends Binary {
+};
+Pipe = __decorate([
+    serializable
+], Pipe);
 exports.Pipe = Pipe;
-class AmpAmp extends Binary {
-}
+let AmpAmp = class AmpAmp extends Binary {
+};
+AmpAmp = __decorate([
+    serializable
+], AmpAmp);
 exports.AmpAmp = AmpAmp;
-class PipePipe extends Binary {
-}
+let PipePipe = class PipePipe extends Binary {
+};
+PipePipe = __decorate([
+    serializable
+], PipePipe);
 exports.PipePipe = PipePipe;
-class Assignment extends Binary {
-}
+let Assignment = class Assignment extends Binary {
+};
+Assignment = __decorate([
+    serializable
+], Assignment);
 exports.Assignment = Assignment;
-class PlusEq extends Binary {
-}
+let PlusEq = class PlusEq extends Binary {
+};
+PlusEq = __decorate([
+    serializable
+], PlusEq);
 exports.PlusEq = PlusEq;
-class MinusEq extends Binary {
-}
+let MinusEq = class MinusEq extends Binary {
+};
+MinusEq = __decorate([
+    serializable
+], MinusEq);
 exports.MinusEq = MinusEq;
-class MultEq extends Binary {
-}
+let MultEq = class MultEq extends Binary {
+};
+MultEq = __decorate([
+    serializable
+], MultEq);
 exports.MultEq = MultEq;
-class DivEq extends Binary {
-}
+let DivEq = class DivEq extends Binary {
+};
+DivEq = __decorate([
+    serializable
+], DivEq);
 exports.DivEq = DivEq;
-class ModEq extends Binary {
-}
+let ModEq = class ModEq extends Binary {
+};
+ModEq = __decorate([
+    serializable
+], ModEq);
 exports.ModEq = ModEq;
-class ShREq extends Binary {
-}
+let ShREq = class ShREq extends Binary {
+};
+ShREq = __decorate([
+    serializable
+], ShREq);
 exports.ShREq = ShREq;
-class ShLEq extends Binary {
-}
+let ShLEq = class ShLEq extends Binary {
+};
+ShLEq = __decorate([
+    serializable
+], ShLEq);
 exports.ShLEq = ShLEq;
-class AmpEq extends Binary {
-}
+let AmpEq = class AmpEq extends Binary {
+};
+AmpEq = __decorate([
+    serializable
+], AmpEq);
 exports.AmpEq = AmpEq;
-class CaretEq extends Binary {
-}
+let CaretEq = class CaretEq extends Binary {
+};
+CaretEq = __decorate([
+    serializable
+], CaretEq);
 exports.CaretEq = CaretEq;
-class PipeEq extends Binary {
-}
+let PipeEq = class PipeEq extends Binary {
+};
+PipeEq = __decorate([
+    serializable
+], PipeEq);
 exports.PipeEq = PipeEq;
-class PowerEq extends Binary {
-}
+let PowerEq = class PowerEq extends Binary {
+};
+PowerEq = __decorate([
+    serializable
+], PowerEq);
 exports.PowerEq = PowerEq;
-class UnaryPrefix {
-}
+let Range = class Range extends Binary {
+};
+Range = __decorate([
+    serializable
+], Range);
+exports.Range = Range;
+let UnaryPrefix = class UnaryPrefix {
+};
+UnaryPrefix = __decorate([
+    serializable
+], UnaryPrefix);
 exports.UnaryPrefix = UnaryPrefix;
-class PlusPlus extends UnaryPrefix {
-}
+let PlusPlus = class PlusPlus extends UnaryPrefix {
+};
+PlusPlus = __decorate([
+    serializable
+], PlusPlus);
 exports.PlusPlus = PlusPlus;
-class MinusMinus extends UnaryPrefix {
-}
+let MinusMinus = class MinusMinus extends UnaryPrefix {
+};
+MinusMinus = __decorate([
+    serializable
+], MinusMinus);
 exports.MinusMinus = MinusMinus;
-class Plus_Prefix extends UnaryPrefix {
-}
+let Plus_Prefix = class Plus_Prefix extends UnaryPrefix {
+};
+Plus_Prefix = __decorate([
+    serializable
+], Plus_Prefix);
 exports.Plus_Prefix = Plus_Prefix;
-class Minus_Prefix extends UnaryPrefix {
-}
+let Minus_Prefix = class Minus_Prefix extends UnaryPrefix {
+};
+Minus_Prefix = __decorate([
+    serializable
+], Minus_Prefix);
 exports.Minus_Prefix = Minus_Prefix;
-class Exc extends UnaryPrefix {
-}
+let Exc = class Exc extends UnaryPrefix {
+};
+Exc = __decorate([
+    serializable
+], Exc);
 exports.Exc = Exc;
-class Tilde extends UnaryPrefix {
-}
+let Tilde = class Tilde extends UnaryPrefix {
+};
+Tilde = __decorate([
+    serializable
+], Tilde);
 exports.Tilde = Tilde;
-class Splat extends UnaryPrefix {
-}
+let Splat = class Splat extends UnaryPrefix {
+};
+Splat = __decorate([
+    serializable
+], Splat);
 exports.Splat = Splat;
-class Dot_Prefix extends UnaryPrefix {
-}
+let Dot_Prefix = class Dot_Prefix extends UnaryPrefix {
+};
+Dot_Prefix = __decorate([
+    serializable
+], Dot_Prefix);
 exports.Dot_Prefix = Dot_Prefix;
-class TypeOf extends UnaryPrefix {
-}
+let TypeOf = class TypeOf extends UnaryPrefix {
+};
+TypeOf = __decorate([
+    serializable
+], TypeOf);
 exports.TypeOf = TypeOf;
-class AddrOf extends UnaryPrefix {
-}
+let AddrOf = class AddrOf extends UnaryPrefix {
+};
+AddrOf = __decorate([
+    serializable
+], AddrOf);
 exports.AddrOf = AddrOf;
-class SizeOf extends UnaryPrefix {
-}
+let SizeOf = class SizeOf extends UnaryPrefix {
+};
+SizeOf = __decorate([
+    serializable
+], SizeOf);
 exports.SizeOf = SizeOf;
-class StateOf extends UnaryPrefix {
-}
+let StateOf = class StateOf extends UnaryPrefix {
+};
+StateOf = __decorate([
+    serializable
+], StateOf);
 exports.StateOf = StateOf;
-class SwapTo extends UnaryPrefix {
-}
+let SwapTo = class SwapTo extends UnaryPrefix {
+};
+SwapTo = __decorate([
+    serializable
+], SwapTo);
 exports.SwapTo = SwapTo;
-class New extends UnaryPrefix {
-}
+let New = class New extends UnaryPrefix {
+};
+New = __decorate([
+    serializable
+], New);
 exports.New = New;
-class Delete extends UnaryPrefix {
-}
+let Delete = class Delete extends UnaryPrefix {
+};
+Delete = __decorate([
+    serializable
+], Delete);
 exports.Delete = Delete;
-class Return extends UnaryPrefix {
-}
+let Return = class Return extends UnaryPrefix {
+};
+Return = __decorate([
+    serializable
+], Return);
 exports.Return = Return;
-class UnaryPostfix {
-}
+let UnaryPostfix = class UnaryPostfix {
+};
+UnaryPostfix = __decorate([
+    serializable
+], UnaryPostfix);
 exports.UnaryPostfix = UnaryPostfix;
-class Arrow extends UnaryPostfix {
-}
+let Arrow = class Arrow extends UnaryPostfix {
+};
+Arrow = __decorate([
+    serializable
+], Arrow);
 exports.Arrow = Arrow;
-class ConditionalDot extends UnaryPostfix {
-}
+let ConditionalDot = class ConditionalDot extends UnaryPostfix {
+};
+ConditionalDot = __decorate([
+    serializable
+], ConditionalDot);
 exports.ConditionalDot = ConditionalDot;
-class PlusPlus_Postfix extends UnaryPostfix {
-}
+let PlusPlus_Postfix = class PlusPlus_Postfix extends UnaryPostfix {
+};
+PlusPlus_Postfix = __decorate([
+    serializable
+], PlusPlus_Postfix);
 exports.PlusPlus_Postfix = PlusPlus_Postfix;
-class MinusMinus_Postfix extends UnaryPostfix {
-}
+let MinusMinus_Postfix = class MinusMinus_Postfix extends UnaryPostfix {
+};
+MinusMinus_Postfix = __decorate([
+    serializable
+], MinusMinus_Postfix);
 exports.MinusMinus_Postfix = MinusMinus_Postfix;
 class Emit {
     static Emit(ctor, m) {
@@ -194,32 +388,58 @@ class Emit {
     }
 }
 exports.Emit = Emit;
-class ReturnDef {
-}
+let ReturnDef = class ReturnDef {
+};
+ReturnDef = __decorate([
+    serializable
+], ReturnDef);
 exports.ReturnDef = ReturnDef;
-class ArgumentDef {
-}
+let ArgumentDef = class ArgumentDef {
+};
+ArgumentDef = __decorate([
+    serializable
+], ArgumentDef);
 exports.ArgumentDef = ArgumentDef;
-class Statement {
-}
+let Statement = class Statement {
+};
+Statement = __decorate([
+    serializable
+], Statement);
 exports.Statement = Statement;
-class MethodDef {
-}
+let MethodDef = class MethodDef {
+};
+MethodDef = __decorate([
+    serializable
+], MethodDef);
 exports.MethodDef = MethodDef;
-class List {
-}
+let List = class List {
+};
+List = __decorate([
+    serializable
+], List);
 exports.List = List;
-class MacroDef {
-    identity() { return `${this.name};${this.rule}`; }
-}
+let MacroDef = class MacroDef {
+};
+MacroDef = __decorate([
+    serializable
+], MacroDef);
 exports.MacroDef = MacroDef;
-class ImportDef {
-}
+let ImportDef = class ImportDef {
+};
+ImportDef = __decorate([
+    serializable
+], ImportDef);
 exports.ImportDef = ImportDef;
-class TypeDef {
-}
+let TypeDef = class TypeDef {
+};
+TypeDef = __decorate([
+    serializable
+], TypeDef);
 exports.TypeDef = TypeDef;
-class Lambda extends MethodDef {
-}
+let Lambda = class Lambda extends MethodDef {
+};
+Lambda = __decorate([
+    serializable
+], Lambda);
 exports.Lambda = Lambda;
 //# sourceMappingURL=martha.emit.js.map

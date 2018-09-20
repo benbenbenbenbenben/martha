@@ -2,7 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { AST } from "../martha.ast";
 import { Tibu, ResultTokens, Result } from "tibu";
-import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef, Dot } from "../martha.emit";
+import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef, Dot, TypeDef, Div } from "../martha.emit";
 import { ParserContext } from "../martha.grammar";
 const { parse, rule, either, many, all, optional } = Tibu;
 
@@ -28,10 +28,10 @@ describe("types", () => {
             expect(Tibu.parse(`Type: Member`)(Def.typedef_member)).to.deep.eq([{members:[{type:"Type",name:"Member"}]}]);
         });
         it("should parse a type with a base type", () => {
-            expect(Tibu.parse(`type: Foo is: Bar`)(Def.typedef)).to.deep.eq([[{name:"Foo",basetype:"Bar",methods:[]}]]);
+            expect(Tibu.parse(`type: Foo is: Bar`)(Def.typedef)).to.deep.eq([[Emit.Emit(TypeDef, {name:"Foo",basetype:"Bar",methods:[]})]]);
         });
         it("should parse a basic type", () => {
-            expect(Tibu.parse(`type: Foo`)(Def.typedef)).to.deep.eq([[ { name: "Foo", methods:[] } ]]);
+            expect(Tibu.parse(`type: Foo`)(Def.typedef)).to.deep.eq([[Emit.Emit(TypeDef, { name: "Foo", methods:[] })]]);
         });
         it("should parse a basic type with a member variable", () => {
             expect(Tibu.parse(`type: Foo\nis: Bar with:\n    Party: this`)(Def.typedef))
@@ -439,16 +439,16 @@ describe('Exp', () => {
     describe("exp", () => {
         it('accepts x + y * x / w - q', () => {
             // input
-            let input = 'x + y * x / w - q'
+            let input = 'g + y * x / w - q'
             let proc = false
             // output
             let output = (r:ResultTokens, c:any) => {
                 expect(flat(c)).to.deep.eq([
-                    { statement: [
+                    { __TYPE__: "Statement", statement: [
                         Emit.Emit(Minus, {
                             left: Emit.Emit(Plus, {
-                                left: Emit.Emit(Reference, {name:"x"}),
-                                right: Emit.Emit(Plus, {
+                                left: Emit.Emit(Reference, {name:"g"}),
+                                right: Emit.Emit(Div, {
                                     left: Emit.Emit(Mult, {
                                         left: Emit.Emit(Reference, {name:"y"}),
                                         right: Emit.Emit(Reference, {name:"x"}),

@@ -2,7 +2,7 @@
 import { Tibu, Result, ResultTokens, Input, IRule, IToken, Pattern, IRuleAction } from "tibu";
 const { parse, token, rule, all, many, optional, either } = Tibu;
 
-import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List, MacroDef, ImportDef, TypeDef, Lambda, Range } from "./martha.emit";
+import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List, MacroDef, ImportDef, TypeDef, Lambda, Range, IndexDef, TypeRef, ColonBin, QuesBin, ExcBin, IfExp, Attribute } from "./martha.emit";
 import { Op, Mcro } from "./martha.grammar";
 const emit = Emit.Emit
 
@@ -55,7 +55,7 @@ class AST {
 
     static argumentdef(result:ResultTokens, cst:any):any {
         return emit(ArgumentDef, {
-                type: result.one("typename"),
+                type: result.get("typename"),
                 name: result.one("varname"),
                 spec: cst ? flat(flat(cst).filter(isa(Statement)).map(x => x.statement)) : [],
             })
@@ -76,9 +76,14 @@ class AST {
     }
 
     static methoddef(result:ResultTokens, cst:any):MethodDef {
+        console.log(21)
         return emit(MethodDef, {
             name: result.one("ctor") || result.one("name"),
+            attributes: cst && flat(cst).filter(isa(Attribute)),
             access: cst && flat(cst).find(x => x instanceof MethodAccess),
+            abstract: result.get("abstract") !== null,
+            export: result.get("export") !== null,
+            extern: result.get("extern") !== null,
             async: result.get("async") !== null,
             atomic: result.get("atomic") !== null,
             critical: result.get("critical") !== null,
@@ -115,13 +120,29 @@ class AST {
         return flat(types)
     }
 
+    static typedef_index(result:ResultTokens, cst:any):any {
+        console.log(result.get("typename"))
+        let ref = emit(TypeRef, {
+            nameref: result.get("typename"),
+            arrayof: cst ? flat(cst)[0] : undefined
+        })
+        return ref;
+        // return cst ? (result.get("typename") || []).concat([{index:flat(cst)}]) : result.get("typename")
+    }
+
+    static typedef_type(result:ResultTokens, cst:any):any {
+        console.log(flat(cst))
+        return AST.typedef_index(result, cst)
+    }
+
     static typedef_member(result:ResultTokens, cst:any):any {
+        console.log("~", flat(cst))
         return {
             members: flat(cst)
                     .filter(x => isa(Reference)(x))
                     .map(x => {
                         return {
-                            type: result.one("typename"),
+                            type: flat(cst)[0],
                             name: x.name
                         };
                     })
@@ -300,10 +321,12 @@ class AST {
         return flat(cst).slice(1).reduce(
             (left, right) => {
                 let op = new Op()
-                switch(result.tokens[0].name) {
+                switch(result.tokens.shift()!.name) {
                     case op.dot.__token__: return (isa(Reference)(left) && isa(Reference)(right))
                         ? emit(Reference, { name: `${left.name}.${right.name}`}) 
                         : emit(Dot, { left, right })
+                    case op.ques.__token__: return emit(QuesBin, { left, right })
+                    case op.colon.__token__: return emit(ColonBin, { left, right })
                     case op.mult.__token__: return emit(Mult, { left, right })
                     case op.power.__token__: return emit(Power, { left, right })
                     case op.div.__token__: return emit(Div, { left, right })
@@ -415,6 +438,23 @@ class AST {
             console.log("### TRAPPED MACRO", result, cst)
             return 1
         }
+    }
+
+    static attribute(result:ResultTokens, cst:any):any {
+        return emit(Attribute, {
+            body: flat(cst)
+        })
+    }
+
+    static ifexp(result:ResultTokens, cst:any):IfExp {
+        let fcst = flat(cst) 
+        console.log(fcst.map(f=>flat(f.cst)))
+        
+        return emit(IfExp, {
+            expression: flat(named(fcst, "if").cst)[0],
+            body: flat(named(fcst, "if").cst).slice(1),
+            altbody: named(fcst, "else") ? flat(named(fcst, "else").cst) : undefined
+        })
     }
 }
 

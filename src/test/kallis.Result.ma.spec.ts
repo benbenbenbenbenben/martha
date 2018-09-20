@@ -12,8 +12,10 @@ describe("kallis.Result", () => {
     
     it("should be a program", () => {
         console.log(program.types[0])
-        console.log(program.types[0].methods[0].body[0].statement[0].to)
+        console.dir(program.types![0].methods![2].body[0].statement[0].apply.bracketcurly[4].right.left.left.right.to.apply.bracketparen[0].body)
         expect(program).to.not.be.null
+
+        fs.writeFileSync(__dirname + "../../kallis/_kallis.Result.im", JSON.stringify(program, null, 2))
     })
 
 
