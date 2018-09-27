@@ -1,0 +1,16 @@
+{
+  "identity": "C:\\Users\\ben\\Source\\Repos\\martha\\src\\test../../genesis/ITxHook.ma",
+  "imports": [],
+  "macros": [],
+  "types": [
+    {
+      "name": {
+        "value": "ITxHook",
+        "index": 5
+      },
+      "members": [],
+      "methods": [],
+      "__TYPE__": "TypeDef"
+    }
+  ]
+}

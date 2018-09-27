@@ -1,0 +1,11 @@
+C:\Users\ben\Source\Repos\martha\tools\compile\bin\Debug\netcoreapp2.0\compile.deps.json
+C:\Users\ben\Source\Repos\martha\tools\compile\bin\Debug\netcoreapp2.0\compile.runtimeconfig.json
+C:\Users\ben\Source\Repos\martha\tools\compile\bin\Debug\netcoreapp2.0\compile.runtimeconfig.dev.json
+C:\Users\ben\Source\Repos\martha\tools\compile\bin\Debug\netcoreapp2.0\compile.dll
+C:\Users\ben\Source\Repos\martha\tools\compile\bin\Debug\netcoreapp2.0\compile.pdb
+C:\Users\ben\Source\Repos\martha\tools\compile\obj\Debug\netcoreapp2.0\compile.csprojResolveAssemblyReference.cache
+C:\Users\ben\Source\Repos\martha\tools\compile\obj\Debug\netcoreapp2.0\compile.csproj.CoreCompileInputs.cache
+C:\Users\ben\Source\Repos\martha\tools\compile\obj\Debug\netcoreapp2.0\compile.AssemblyInfoInputs.cache
+C:\Users\ben\Source\Repos\martha\tools\compile\obj\Debug\netcoreapp2.0\compile.AssemblyInfo.cs
+C:\Users\ben\Source\Repos\martha\tools\compile\obj\Debug\netcoreapp2.0\compile.dll
+C:\Users\ben\Source\Repos\martha\tools\compile\obj\Debug\netcoreapp2.0\compile.pdb

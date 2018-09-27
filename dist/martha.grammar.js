@@ -1,356 +1,654 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var tibu_1 = require("tibu");
-var parse = tibu_1.Tibu.parse, token = tibu_1.Tibu.token, rule = tibu_1.Tibu.rule, all = tibu_1.Tibu.all, many = tibu_1.Tibu.many, optional = tibu_1.Tibu.optional, either = tibu_1.Tibu.either, flat = tibu_1.Tibu.flat;
-var martha_ast_1 = require("./martha.ast");
-// helpers
-var manysep = function (sep) {
-    var pattern = [];
-    for (var _i = 1; _i < arguments.length; _i++) {
-        pattern[_i - 1] = arguments[_i];
-    }
-    return optional.apply(void 0, pattern.concat([many.apply(void 0, [sep].concat(pattern))]));
+const tibu_1 = require("tibu");
+const { parse, token, rule, all, many, optional, either } = tibu_1.Tibu;
+const martha_ast_1 = require("./martha.ast");
+const martha_program_1 = require("./martha.program");
+const martha_emit_1 = require("./martha.emit");
+const flat = (arr) => {
+    return arr.reduce((acc, val) => Array.isArray(val) ?
+        acc.concat(flat(val)) : acc.concat(val), []);
 };
-var prettyprint = function (x) { return console.log(JSON.stringify(x, null, 2)); };
+class WithParserContext {
+    constructor(context) {
+        this.context = context;
+    }
+}
+// helpers
+const manysep = (sep, ...pattern) => {
+    return optional(...pattern, many(sep, ...pattern));
+};
+const prettyprint = (x) => console.log(JSON.stringify(x, null, 2));
+const op = (order, r2l, name, pattern) => {
+    return Object.assign(token(name, pattern), { order, r2l });
+};
+const oneormore = (refrule) => {
+    return rule(refrule, many(refrule));
+};
+const named = (name) => {
+    return (result, cst) => {
+        return { named: name, result, cst };
+    };
+};
+class Ctx {
+    constructor(context) {
+        this.context = context;
+        this.contexts = [];
+    }
+    push(ctx) {
+        return (input) => {
+            this.contexts.push(ctx);
+            input.yieldtoken(ctx, tibu_1.Result.pass(input));
+            return tibu_1.Result.pass(input);
+        };
+    }
+    pop(ctx) {
+        return (input) => {
+            if (this.contexts && this.contexts[this.contexts.length - 1] === ctx) {
+                this.contexts.pop();
+                input.yieldtoken(ctx, tibu_1.Result.pass(input));
+                return tibu_1.Result.pass(input);
+            }
+            return tibu_1.Result.fault(input);
+        };
+    }
+    peek(ctx) {
+        return (input) => {
+            if (this.contexts && this.contexts[this.contexts.length - 1] === ctx) {
+                input.yieldtoken(ctx, tibu_1.Result.pass(input));
+                return tibu_1.Result.pass(input);
+            }
+            return tibu_1.Result.fault(input);
+        };
+    }
+    clear() {
+        return (input) => {
+            this.contexts.forEach(ctx => input.yieldtoken(ctx, tibu_1.Result.pass(input)));
+            this.contexts = [];
+            return tibu_1.Result.pass(input);
+        };
+    }
+}
+exports.Ctx = Ctx;
 // const op
 // let op:any = rule(spaces, token("op", /\=|\+\=|\-\=|and|or|not|xor/), spaces);
-var Mcro = /** @class */ (function () {
-    function Mcro() {
+class Mcro {
+    constructor() {
+        this._let = token("let", "let");
+        this._new = token("new", "new");
+        this._typeof = token("typeof", "typeof");
+        this._sizeof = token("sizeof", "sizeof");
+        this._addrof = token("addrof", /addrof|addressof/);
+        this.stateof = token("stateof", "stateof");
+        this.delete = token("delete", "delete");
+        this.return = token("return", "return");
+        // state transition operator
+        this.swapto = token("swapto", "swapto");
     }
-    Mcro._new = token("new", "new");
-    Mcro._typeof = token("typeof", "typeof");
-    Mcro._sizeof = token("sizeof", "sizeof");
-    Mcro._addrof = token("addrof", /addrof|addressof/);
-    Mcro.stateof = token("stateof", "stateof");
-    Mcro.delete = token("delete", "delete");
-    Mcro.return = token("return", "return");
-    Mcro.swapto = token("swapto", "swapto");
-    return Mcro;
-}());
+    get macros() {
+        return [
+            this._let,
+            this._new,
+            this._typeof,
+            this._sizeof,
+            this._addrof,
+            this.stateof,
+            this.delete,
+            this.return,
+            this.swapto
+        ];
+    }
+}
 exports.Mcro = Mcro;
-var Op = /** @class */ (function () {
-    function Op() {
+class Op {
+    constructor() {
+        // binary infix
+        this.assign = token("assign", "=");
+        this.pluseq = token("pluseq", "+=");
+        this.minuseq = token("minuseq", "-=");
+        this.multeq = token("multeq", "*=");
+        this.powereq = token("powereq", "**=");
+        this.diveq = token("diveq", "/=");
+        this.modeq = token("modeq", "%=");
+        this.careteq = token("careteq", "^=");
+        this.ampeq = token("ampeq", "&=");
+        this.pipeeq = token("pipeeq", "|=");
+        this.shleq = token("shleq", "<<=");
+        this.shreq = token("shreq", ">>=");
+        this.lt = token("lt", "<");
+        this.lte = token("lte", "<=");
+        this.gt = token("gt", ">");
+        this.gte = token("gte", ">=");
+        this.dot = token("dot", ".");
+        this.conditionaldot = token("conditionaldot", "?.");
+        this.plus = token("plus", "+");
+        this.minus = token("minus", "-");
+        this.div = token("div", "/");
+        this.mult = token("mult", "*");
+        this.mod = token("mod", "%");
+        this.power = token("power", "**");
+        this.range = token("range", "..");
+        // prefix/suffix
+        this.plusplus = token("plusplus", "++");
+        this.minusminus = token("minusminus", "--");
+        this.splat = token("splat", "...");
+        this.infix_comma = rule(/\s*,\s*/);
+        this.infix_colon = rule(/\s*\:\s*/);
+        this.lsquare = token("lsquare", "[");
+        this.rsquare = token("rsquare", "]");
+        this.lcurly = token("lcurly", "{");
+        this.rcurly = token("rcurly", "}");
+        this.langle = token("langle", "<");
+        this.rangle = token("rangle", ">");
+        this.lparen = token("lparen", "(");
+        this.rparen = token("rparen", ")");
+        this.arrow = token("arrow", "->");
+        this.fatarrow = token("arrow", "=>");
+        this.exc = token("exc", "!");
+        this.tilde = token("tilde", "~");
+        this.ques = token("ques", "?");
+        this.colon = token("colon", ":");
+        this.amp = token("amp", "&");
+        this.caret = token("caret", "^");
+        this.pipe = token("pipe", "|");
+        this.ampamp = token("ampamp", "&&");
+        this.pipepipe = token("pipepipe", "||");
+        this.eqeq = token("eq", "==");
+        this.noteq = token("eq", "!=");
+        this.shiftleft = token("shiftleft", "<<");
+        this.shiftright = token("shiftright", ">>");
     }
-    Object.defineProperty(Op, "anybinary", {
-        get: function () {
-            return either(this.assign, this.pluseq, this.lt, this.lte, this.gt, this.gte, this.dot, this.plus, this.minus, this.div, this.mult, this.mod);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Op, "anyprefix", {
-        get: function () {
-            return either(this.plusplus, this.minusminus);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Op, "anypostfix", {
-        get: function () {
-            return either(this.plusplus, this.minusminus);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    // binary infix
-    Op.assign = token("assign", "=");
-    Op.pluseq = token("pluseq", "+=");
-    Op.lt = token("lt", "<");
-    Op.lte = token("lte", "<=");
-    Op.gt = token("gt", ">");
-    Op.gte = token("gte", ">=");
-    Op.dot = token("dot", ".");
-    Op.plus = token("plus", "+");
-    Op.minus = token("minus", "-");
-    Op.div = token("div", "/");
-    Op.mult = token("mult", "*");
-    Op.mod = token("mod", "%");
-    // prefix/suffix
-    Op.plusplus = token("plusplus", "++");
-    Op.minusminus = token("minusminus", "--");
-    Op.infix_comma = rule(/\s*,\s*/);
-    Op.infix_colon = rule(/\s*\:\s*/);
-    Op.lsquare = token("lsquare", "[");
-    Op.rsquare = token("rsquare", "]");
-    Op.lcurly = token("lcurly", "{");
-    Op.rcurly = token("rcurly", "}");
-    Op.langle = token("langle", "<");
-    Op.rangle = token("rangle", ">");
-    return Op;
-}());
+    /**
+     * token producer: binary operators
+     */
+    get anybinary() {
+        return either(this.assign, this.pluseq, this.lt, this.lte, this.gt, this.gte, this.dot, this.plus, this.minus, this.div, this.mult, this.mod);
+    }
+    get anyprefix() {
+        return either(this.plusplus, this.minusminus);
+    }
+    get anypostfix() {
+        return either(this.plusplus, this.minusminus);
+    }
+    /**
+     * 0. left to right
+     */
+    get postfixOperators() {
+        return [
+            // lparen,rparen,lsquare,rsquare
+            // Op.arrow,
+            // Op.dot,
+            // Op.conditionaldot,
+            this.plusplus,
+            this.minusminus,
+        ];
+    }
+    /**
+     * right to left
+     */
+    get sorted1_prefix() {
+        return [
+            this.plusplus,
+            this.minusminus,
+            this.plus,
+            this.minus,
+            this.exc,
+            this.tilde,
+            this.splat,
+        ];
+    }
+    /**
+     * left to right
+     */
+    get sorted2_binary() {
+        return [
+            this.dot,
+            this.power,
+            this.mult,
+            this.div,
+            this.mod,
+        ];
+    }
+    /**
+     * left to right
+     */
+    get sorted3_binary() {
+        return [
+            this.plus,
+            this.minus,
+        ];
+    }
+    /**
+     * left to right
+     */
+    get sorted4_binary() {
+        return [
+            this.shiftleft,
+            this.shiftright,
+        ];
+    }
+    /**
+     * left to right
+     */
+    get sorted5_binary() {
+        return [
+            this.lte,
+            this.lt,
+            this.gte,
+            this.gt,
+        ];
+    }
+    /**
+     * left to right
+     */
+    get sorted5b_binary() {
+        return [
+            this.ques,
+        ];
+    }
+    /**
+     * left to right
+     */
+    get sorted6_binary() {
+        return [
+            this.eqeq,
+            this.noteq,
+        ];
+    }
+    /**
+     * left to right (precedence implied)
+     */
+    get sorted7_binary() {
+        return [
+            this.ampamp,
+            this.amp,
+            this.caret,
+            this.pipepipe,
+            this.pipe,
+            this.range,
+        ];
+    }
+    /**
+     * right to left
+     */
+    get sorted9_binary() {
+        return [
+            this.assign,
+            this.pluseq,
+            this.minuseq,
+            this.multeq,
+            this.diveq,
+            this.modeq,
+            this.shreq,
+            this.shleq,
+            this.ampeq,
+            this.careteq,
+            this.pipeeq,
+            this.powereq,
+        ];
+    }
+    get sortedA_binary() {
+        return [
+            this.infix_comma
+        ];
+    }
+}
 exports.Op = Op;
-var Val = /** @class */ (function () {
-    function Val() {
+class Val extends WithParserContext {
+    constructor(context) {
+        super(context);
+        this.bool = token("bool", /true|false/);
+        this.integer = token("integer", /[\d]+/);
+        this.str = token("string", /"[^"]*"|'[^']*'/);
     }
-    Object.defineProperty(Val, "anyliteral", {
-        get: function () {
-            return either(this.bool, this.integer, this.str);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Val.bool = token("bool", /true|false/);
-    Val.integer = token("integer", /[\d]+/);
-    Val.str = token("string", /\"[^\"]+|\'[^\']+/);
-    return Val;
-}());
+    get anyliteral() {
+        return either(this.bool, this.integer, this.str);
+    }
+}
 exports.Val = Val;
-var Kwrd = /** @class */ (function () {
-    function Kwrd() {
+class Kwrd {
+    constructor(context) {
+        // access
+        this.public = token("public", /public/);
+        this.private = token("private", /private/);
+        this.internal = token("internal", /internal/);
+        this.protected = token("protected", /protected/);
+        this.export = token("export", "export");
+        this.extern = token("extern", "extern");
+        this.abstract = token("abstract", "abstract");
+        this.async = token("async", /async/);
+        this.atomic = token("atomic", /atomic/);
+        this.critical = token("critical", /critical/);
+        this.static = token("static", /static/);
+        this.ctor = token("ctor", /constructor/);
+        this.macro = "macro";
+        this.when = "when";
+        this.use = "use";
+        this.type = "type";
+        this.interface = "interface";
+        this.is = "is";
+        this.as = "as";
+        this.with = "with";
+        this.import = "import";
+        this.context = context;
     }
-    Object.defineProperty(Kwrd, "anyaccess", {
-        get: function () {
-            return either(this.public, this.private, this.internal, this.protected);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    // access
-    Kwrd.public = token("public", /public/);
-    Kwrd.private = token("private", /private/);
-    Kwrd.internal = token("internal", /internal/);
-    Kwrd.protected = token("protected", /protected/);
-    Kwrd.async = token("async", /async/);
-    Kwrd.atomic = token("atomic", /atomic/);
-    Kwrd.static = token("static", /static/);
-    Kwrd.ctor = token("ctor", /constructor/);
-    Kwrd.type = "type";
-    Kwrd.is = "is";
-    Kwrd.with = "with";
-    return Kwrd;
-}());
+    get anyaccess() {
+        return either(this.public, this.private, this.internal, this.protected);
+    }
+}
 exports.Kwrd = Kwrd;
-var Ref = /** @class */ (function () {
-    function Ref() {
+class Ref extends WithParserContext {
+    constructor(context) {
+        super(context);
+        // members and variables
+        this._member = token("member", /[a-z_\$\@][a-z0-9\$\@]*/i);
+        this.varname = token("varname", /[a-z_\$\@][a-z0-9\$\@]*/i);
+        this.member = rule(this._member, many(this.context.op.dot, this._member))
+            .yields(martha_ast_1.AST.reference);
+        this.typename = token("typename", /[a-z_\$\@][a-z0-9\$\@]*/i);
     }
-    // members and variables
-    Ref._member = token("member", /[a-z_\$\@][a-z0-9\$\@]*/i);
-    Ref.varname = token("varname", /[a-z_\$\@][a-z0-9\$\@]*/i);
-    Ref.member = rule(Ref._member, many(Op.dot, Ref._member))
-        .yields(martha_ast_1.AST.reference);
-    Ref.typename = token("typename", /[a-z_\$\@][a-z0-9\$\@]*/i);
-    return Ref;
-}());
+}
 exports.Ref = Ref;
-var Ws = /** @class */ (function () {
-    function Ws() {
+class Ws extends WithParserContext {
+    constructor(context) {
+        super(context);
+        this.space0ton = /[ \t]*/;
+        this.space1ton = /[ \t]+/;
+        this.newline = /\r\n|\r|\n\r|\n/;
+        this.indent = token("indent", /^[ \t]+/);
+        this.emptyline = rule(/\s*$/, this.newline);
+        this.emptylines = rule(many(this.emptyline));
+        this.IND = rule(this.newline, this.indent).yields(function (result) {
+            this._indent = result.tokens[0].result.value;
+        });
+        this.getIndent = (input) => {
+            let index = input.source.substring(input.location).indexOf(this.IND._indent);
+            if (index === 0) {
+                input.location += this.IND._indent.length;
+                return tibu_1.Result.pass(input);
+            }
+            return tibu_1.Result.fault(input);
+        };
+        this.IND_WS = rule(this.space0ton, optional(this.IND));
+        this.ANY_WS = rule(/[\t\r\n\s]*/);
+        this.lr0ton = (token) => rule(this.space0ton, token, this.space0ton);
     }
-    Ws.space0ton = /[ \t]*/;
-    Ws.space1ton = /[ \t]+/;
-    Ws.newline = /\r\n|\r|\n|\n\r/;
-    Ws.indent = token("indent", /^[ \t]+/);
-    Ws.IND = rule(Ws.newline, Ws.indent).yields(function (result) {
-        this._indent = result.tokens[0].result.value;
-    });
-    Ws.getIndent = function (input) {
-        var index = input.source.substring(input.location).indexOf(Ws.IND._indent);
-        if (index === 0) {
-            input.location += Ws.IND._indent.length;
-            return tibu_1.Result.pass(input);
-        }
-        return tibu_1.Result.fault(input);
-    };
-    Ws.IND_WS = rule(Ws.space0ton, optional(Ws.IND));
-    Ws.ANY_WS = rule(/[\t\r\n\s]*/);
-    return Ws;
-}());
+}
 exports.Ws = Ws;
-var Util = /** @class */ (function () {
-    function Util() {
-    }
-    Util.indents = [];
-    Util.pushIndent = rule(Ws.space0ton, Ws.newline, Ws.indent).yields(function (r) {
-        Util.indents.push(r.tokens[0].result.value);
-    });
-    Util.peekIndent = rule(Ws.newline, function (input) {
-        var index = input.source.substring(input.location).indexOf(Util.indents[Util.indents.length - 1]);
-        if (index === 0) {
-            input.location += Util.indents[Util.indents.length - 1].length;
+class Util extends WithParserContext {
+    constructor(context) {
+        super(context);
+        this.indents = [];
+        this.pushIndent = rule(this.context.ws.space0ton, this.context.ws.newline, this.context.ws.indent).yields((r) => {
+            console.log("push");
+            this.indents.push(r.one("indent").value);
+        });
+        this.peekIndent = rule(this.context.ws.newline, (input) => {
+            let index = input.source.substring(input.location).indexOf(this.indents[this.indents.length - 1]);
+            if (index === 0) {
+                input.location += this.indents[this.indents.length - 1].length;
+                return tibu_1.Result.pass(input);
+            }
+            return tibu_1.Result.fault(input);
+        });
+        this.popIndent = rule((input) => {
+            console.log("pop");
+            this.indents.pop();
             return tibu_1.Result.pass(input);
-        }
-        return tibu_1.Result.fault(input);
-    });
-    Util.popIndent = rule(Ws.newline, function (input) {
-        Util.indents.pop();
-        return tibu_1.Result.pass(input);
-    });
-    Util.EOF = rule(function (input) { return input.location === input.source.length ?
-        tibu_1.Result.pass(input) : tibu_1.Result.fault(input); });
-    Util.block = function (begin, repeat) { return rule(begin, /[ \t]*:[ \t]*/, either(all(Util.pushIndent, many(repeat, either(Util.peekIndent, Util.popIndent, Util.EOF))), all(repeat, /\s*/))); };
-    return Util;
-}());
+        });
+        this.EOF = rule((input) => input.location === input.source.length ?
+            tibu_1.Result.pass(input) : tibu_1.Result.fault(input));
+        this.block = (begin, repeat) => rule(many(this.context.ws.newline), begin, /[ \t]*:[ \t]*/, either(all(this.pushIndent, repeat, many(this.peekIndent, repeat), this.popIndent), all(repeat, many(repeat), /[ \t]*/), all(repeat, many(repeat), this.EOF), all(optional(/\s*/), this.EOF)));
+    }
+}
 exports.Util = Util;
-var Exp = /** @class */ (function () {
-    function Exp() {
+class Exp extends WithParserContext {
+    constructor(context) {
+        super(context);
+        this.ifexp = rule(this.context.util.block(all("if", this.context.ws.space1ton, () => this.context.stmt.statement), all(() => this.context.stmt.statement)))
+            .yields(named("if"));
+        this.atomliteral = rule(this.context.val.anyliteral)
+            .yields(martha_ast_1.AST.atomliteral);
+        this.atomlambdaliteral = rule(rule(either(all("(", () => this.context.def.argumentdefs, ")"), all("(", optional(this.context.ref._member, many(this.context.op.infix_comma, this.context.ref._member)), ")"), () => this.context.def.argumentdef, this.context.ref._member)).yields(named("spec")), this.context.ws.lr0ton("=>"), rule(() => this.context.stmt.statement).yields(named("body")))
+            .yields(martha_ast_1.AST.atomlambdaliteral);
+        this.atommember = rule(this.context.ref.member)
+            .yields(martha_ast_1.AST.atommember);
+        /**
+         * MACRO INSERTION
+         */
+        this.atominsert = [];
+        /**
+         * cst producer
+         */
+        this.subatom = rule(either(
+        /**/
+        (input) => {
+            //console.log("looking for insert", this.atominsert.length)
+            if (this.atominsert.length)
+                return rule(either(...this.atominsert));
+            else
+                return tibu_1.Result.fault(input);
+        }, this.atomlambdaliteral, oneormore(rule(/[ \t]*\(/, many(this.context.ws.ANY_WS, () => this.exprAinfix, this.context.ws.ANY_WS), /[ \t]*\)/).yields(martha_ast_1.AST.bracketparen)), oneormore(rule(/[ \t]*\{/, many(this.context.ws.ANY_WS, () => this.exprAinfix, this.context.ws.ANY_WS), /[ \t]*\}/).yields(martha_ast_1.AST.bracketcurly)), oneormore(rule(/[ \t]*\[/, many(this.context.ws.ANY_WS, () => this.exprAinfix, this.context.ws.ANY_WS), /[ \t]*\]/).yields(martha_ast_1.AST.bracketarray)), this.atomliteral, this.atommember));
+        this.atom = rule(either(rule(this.subatom, many(this.context.ws.space0ton, this.subatom)), rule(this.context.ctx.peek("spec")).yields(martha_ast_1.AST.thisref)))
+            .yields(martha_ast_1.AST.atom);
+        /**
+         * cst producer
+         */
+        this.expr0postfix = rule(this.atom, many(either(...this.context.op.postfixOperators))).yields(martha_ast_1.AST.postfixexpr);
+        this.expr1prefix = rule(many(either(...this.context.op.sorted1_prefix)), this.expr0postfix).yields(martha_ast_1.AST.prefixexpr);
+        this.expr2infix = rule(this.expr1prefix, many(this.context.ws.lr0ton(either(...this.context.op.sorted2_binary)), this.expr1prefix)).yields(martha_ast_1.AST.binaryexpr);
+        this.expr3infix = rule(this.expr2infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted3_binary)), this.expr2infix)).yields(martha_ast_1.AST.binaryexpr);
+        this.expr4infix = rule(this.expr3infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted4_binary)), this.expr3infix)).yields(martha_ast_1.AST.binaryexpr);
+        this.expr5infix = rule(this.expr4infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted5_binary)), this.expr4infix)).yields(martha_ast_1.AST.binaryexpr);
+        this.expr5binfix = rule(this.expr5infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted5b_binary)), this.expr5infix)).yields(martha_ast_1.AST.binaryexpr);
+        this.expr6infix = rule(this.expr5binfix, many(this.context.ws.lr0ton(either(...this.context.op.sorted6_binary)), this.expr5binfix)).yields(martha_ast_1.AST.binaryexpr);
+        this.expr7infix = rule(this.expr6infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted7_binary)), this.expr6infix)).yields(martha_ast_1.AST.binaryexpr);
+        this.expr9infix = rule(this.expr7infix, many(this.context.ws.lr0ton(either(...this.context.op.sorted9_binary)), this.expr7infix)).yields(martha_ast_1.AST.binaryexpr);
+        this.exprAinfix = rule(this.expr9infix, many(this.context.ws.lr0ton(either(...this.context.op.sortedA_binary)), this.expr9infix)).yields(martha_ast_1.AST.commaexpr);
     }
-    Exp.atomparen = rule("(", optional(function () { return Exp.exp; }), ")")
-        .yields(martha_ast_1.AST.atomparen)
-        .passes("()", { op: "parenthesis" })
-        .passes("(1)", { op: "parenthesis", parameters: [{ op: "literal", parameters: ["integer", "1"] }] });
-    Exp.atomcall = rule(Ref.member, "(", optional(function () { return Exp.exp; }, many(Op.infix_comma, function () { return Exp.exp; })), ")")
-        .yields(martha_ast_1.AST.atomcall)
-        .passes("k()", { op: "call", parameters: [["k"]] })
-        .passes("k.q()", { op: "call", parameters: [["k", "q"]] })
-        .passes("k.q(1)", { op: "call", parameters: [["k", "q"], { op: "literal", parameters: ["integer", "1"] }] })
-        .passes("k([1,2,3],[a.aa,b,c])", {
-        op: "call", parameters: [
-            ["k"], {
-                op: "arrayliteral",
-                parameters: [
-                    { op: "literal", parameters: ["integer", "1"] },
-                    { op: "literal", parameters: ["integer", "2"] },
-                    { op: "literal", parameters: ["integer", "3"] }
-                ]
-            }, {
-                op: "arrayliteral",
-                parameters: [
-                    { op: "reference", parameters: ["a", "aa"] },
-                    { op: "reference", parameters: ["b"] },
-                    { op: "reference", parameters: ["c"] }
-                ]
-            }
-        ]
-    });
-    Exp.atomliteral = rule(Val.anyliteral)
-        .yields(martha_ast_1.AST.atomliteral);
-    Exp.atomarrliteral = rule(Op.lsquare, optional(function () { return Exp.exp; }, (many(Op.infix_comma, function () { return Exp.exp; }))), Op.rsquare)
-        .yields(martha_ast_1.AST.atomarrliteral)
-        .passes("[]", { op: "arrayliteral", parameters: [] })
-        .passes("[1]", { op: "arrayliteral", parameters: [{ op: "literal", parameters: ["integer", "1"] }] })
-        .passes("[[]]", { op: "arrayliteral", parameters: [{ op: "arrayliteral", parameters: [] }] })
-        .passes("[k()]", { op: "arrayliteral", parameters: [{ op: "call", parameters: [["k"]] }] })
-        .passes("[1,2,3]", { op: "arrayliteral", parameters: [
-            { op: "literal", parameters: ["integer", "1"] },
-            { op: "literal", parameters: ["integer", "2"] },
-            { op: "literal", parameters: ["integer", "3"] }
-        ] });
-    Exp.atomobjliteral = rule(Op.lcurly, manysep(Op.infix_comma, either(all(Ref.member, Op.assign, function () { return Exp.exp; }), Ref.member)), Op.rcurly)
-        .yields(martha_ast_1.AST.atomobjliteral)
-        .passes("{}", { op: "literal", parameters: ["object"] })
-        .passes("{a=2}", { op: "literal", parameters: ["object", {
-                op: "assign", parameters: ["a", { op: "literal", parameters: ["integer", "2"] }]
-            }
-        ] })
-        .passes("{a=2,b=0}", { op: "literal", parameters: ["object", {
-                op: "assign", parameters: ["a", { op: "literal", parameters: ["integer", "2"] }]
-            }, {
-                op: "assign", parameters: ["b", { op: "literal", parameters: ["integer", "0"] }]
-            }
-        ] });
-    Exp.atomlambdaliteral = rule(Util.block(either(all("(", function () { return Def.argumentdefs; }, ")"), function () { return Def.argumentdef; }), function () { return Stmt.statement; }));
-    Exp.atommember = rule(Ref.member)
-        .yields(martha_ast_1.AST.atommember);
-    Exp.atom = rule(optional(rule(Op.anyprefix).yields(martha_ast_1.AST.prefixop)), either(Exp.atomliteral, Exp.atomcall, Exp.atomarrliteral, Exp.atomobjliteral, Exp.atomlambdaliteral, Exp.atomparen, Exp.atommember), optional(rule(Op.anypostfix).yields(martha_ast_1.AST.postfixop)))
-        .yields(martha_ast_1.AST.atom)
-        .passes("a++", [{ op: "reference", parameters: ["a"] }, { op: "postfix", parameters: ["plusplus"] }])
-        .passes("++a", [{ op: "prefix", parameters: ["plusplus"] }, { op: "reference", parameters: ["a"] }]);
-    Exp.exp = rule(Exp.atom, many(/ */, Op.anybinary, / */, Exp.atom))
-        .yields(martha_ast_1.AST.exp)
-        .passes("a + b + c", [
-        { "op": "reference", "parameters": ["a"] }, { "op": "plus" },
-        { "op": "reference", "parameters": ["b"] }, { "op": "plus" },
-        { "op": "reference", "parameters": ["c"] }
-    ]);
-    return Exp;
-}());
+}
 exports.Exp = Exp;
-var Stmt = /** @class */ (function () {
-    function Stmt() {
+class Stmt extends WithParserContext {
+    constructor(context) {
+        super(context);
+        this.statement = rule(either(
+        // rule(either(...Mcro.macros), Ws.space0ton, () => Stmt.statement).yields(AST.call),
+        // rule(this.context.exp.exprAinfix, "(", () => Stmt.statement, ")").yields(AST.calluser),
+        // rule(this.context.exp.exprAinfix, Ws.space1ton, () => Stmt.statement).yields(AST.calluser),
+        this.context.util.block("critical", all(() => this.context.stmt.statement)), this.context.util.block("atomic", all(() => this.context.stmt.statement)), this.context.util.block("async", all(() => this.context.stmt.statement)), 
+        // TODO: this is a contextual rule
+        this.context.util.block("emit", all(() => this.context.stmt.statement)), this.context.util.block(all("lock", this.context.ws.space1ton, many(this.context.exp.exprAinfix)), all(() => this.context.stmt.statement)), this.context.util.block(all("while", this.context.ws.space1ton, many(this.context.exp.exprAinfix)), all(() => this.context.stmt.statement)), rule(this.context.exp.ifexp, many(rule(many(this.context.ws.newline), "else", this.context.ws.space1ton, this.context.exp.ifexp).yields(named("elseif"))), optional(this.context.util.block("else", all(() => this.context.stmt.statement)).yields(named("else")))).yields(martha_ast_1.AST.ifexp), many(this.context.exp.exprAinfix, optional(this.context.ctx.clear()))))
+            .yields(martha_ast_1.AST.statement);
+        this.macrospecification = rule(token("insert", /\$\w+/), this.context.ws.lr0ton("("), many(either(rule(this.context.ws.lr0ton(token("rulereference", /\$[a-z0-9\.]+/i))), //.yields(named("reference"))),
+        rule(this.context.ws.lr0ton(token("ruleword", /\w+/))) //.yields(named("word")))
+        )), this.context.ws.lr0ton(")"));
     }
-    Stmt.stmt_expression = rule(Exp.exp)
-        .yields(function (r) {
-        return r.tokens;
-    });
-    Stmt.statement = rule(either(Stmt.stmt_expression));
-    return Stmt;
-}());
+}
 exports.Stmt = Stmt;
-var Def = /** @class */ (function () {
-    function Def() {
+class Def extends WithParserContext {
+    constructor(context) {
+        super(context);
+        this.argumentspec = rule(rule("{", this.context.ctx.push("spec"), this.context.stmt.statement, "}" //, this.context.ctx.pop("spec")
+        )
+            .yields(named("argspec")))
+            .yields(martha_ast_1.AST.argumentsspec);
+        this.argumentdef = rule(optional(this.context.op.splat), () => this.context.def.typedef_type, this.context.op.infix_colon, this.context.ws.lr0ton(this.context.ref.varname), optional(this.argumentspec))
+            .yields(martha_ast_1.AST.argumentdef);
+        this.returndef = rule(() => this.context.def.typedef_type, optional(this.argumentspec))
+            .yields(martha_ast_1.AST.returndef);
+        this.argumentdefs = rule(this.argumentdef, many(this.context.op.infix_comma, this.argumentdef))
+            .yields(martha_ast_1.AST.argumentdefs);
+        this.methoddef = rule(optional(rule("@", this.context.stmt.statement, /\s*/).yields(martha_ast_1.AST.attribute)), this.context.util.block(all(rule(many(either(this.context.kwrd.anyaccess, this.context.kwrd.abstract, this.context.kwrd.export, this.context.kwrd.extern, this.context.kwrd.static, this.context.kwrd.async, this.context.kwrd.atomic, this.context.kwrd.critical), this.context.ws.space1ton)).yields(named("accessors")), either(all(this.returndef, this.context.ws.lr0ton(this.context.op.colon), token("name", /\w+/)), this.context.kwrd.ctor), optional(this.context.ws.lr0ton(this.context.op.lparen), optional(this.argumentdefs), this.context.ws.lr0ton(this.context.op.rparen))), this.context.stmt.statement))
+            .yields(martha_ast_1.AST.methoddef);
+        /*
+            methoddec = rule(
+                optional(rule(this.context.kwrd.anyaccess, many(this.context.ws.space1ton, this.context.kwrd.anyaccess), this.context.ws.space1ton).yields(AST.anyaccess)),
+                optional(this.context.kwrd.export, this.context.ws.space1ton),
+                optional(this.context.kwrd.extern, this.context.ws.space1ton),
+                optional(this.context.kwrd.static, this.context.ws.space1ton),
+                optional(this.context.kwrd.async, this.context.ws.space1ton),
+                optional(this.context.kwrd.atomic, this.context.ws.space1ton),
+                optional(this.context.kwrd.critical, this.context.ws.space1ton),
+                either(
+                    all(this.returndef, this.context.ws.space1ton, token("name", /\w+/)),
+                    this.context.kwrd.ctor
+                ),
+                optional(
+                    this.context.ws.lr0ton(this.context.op.lparen),
+                        optional(this.argumentdefs),
+                    this.context.ws.lr0ton(this.context.op.rparen)
+                )
+            )
+            ;*/
+        this.macrodef = rule(this.context.util.block(rule(all(this.context.kwrd.macro, this.context.ws.space1ton, either(this.context.ref._member, this.context.val.str))).yields(named("name")), rule(this.context.util.block(rule(this.context.kwrd.as, this.context.ws.space1ton, rule(this.context.stmt.statement)), this.context.stmt.statement)).yields(martha_ast_1.AST.macrorule)))
+            .yields(martha_ast_1.AST.macrodef);
+        this.macrodefs = rule(many(this.macrodef, optional(this.context.ws.ANY_WS)))
+            .yields(martha_ast_1.AST.flatcst);
+        this.membernames = rule(this.context.ref.member, many(optional(this.context.op.infix_comma, this.context.ref.member)))
+            .yields((result, cst) => {
+            return flat(cst);
+        });
+        this.importdef = rule(this.context.kwrd.import, this.context.ws.space1ton, this.context.ref.member)
+            .yields(martha_ast_1.AST.importdef);
+        this.importdefs = rule(many(this.importdef, optional(this.context.ws.ANY_WS)))
+            .yields(martha_ast_1.AST.flatcst);
+        this.typedef_name = rule(this.context.ref.typename, many(this.context.op.infix_comma, this.context.ref.typename))
+            .yields(martha_ast_1.AST.typedef_name);
+        this.typedef_index = rule(rule(this.context.ref.member, many(this.context.ws.space1ton, this.context.ref.member)).yields(named("name")), 
+        // TODO: generic
+        optional(rule(this.context.op.langle, 
+        // TODO: upgrade to bracket/block
+        rule(all(() => this.context.def.typedef_index)).yields(named("types")), many(this.context.op.infix_comma, rule(all(() => this.context.def.typedef_index)).yields(named("types"))), this.context.op.rangle)), 
+        // indexer
+        optional(rule(this.context.op.lsquare, optional(all(() => this.context.def.typedef_index)), this.context.op.rsquare).yields(named("indexer"))))
+            .yields(martha_ast_1.AST.typedef_index);
+        this.typedef_type = rule(this.typedef_index)
+            .yields(martha_ast_1.AST.typedef_type);
+        this.typedef_member = rule(this.typedef_index, this.context.op.infix_colon, this.membernames, optional(either(all(this.context.ws.lr0ton(this.context.op.fatarrow), this.context.stmt.statement), all(this.context.ws.lr0ton(this.context.op.assign), this.context.stmt.statement), all(this.context.ws.space1ton, this.context.util.block(this.context.kwrd.with, either(this.context.util.block("get", this.context.stmt.statement).yields(named("getter")), this.context.util.block("set", this.context.stmt.statement).yields(named("setter"))))))))
+            .yields(martha_ast_1.AST.typedef_member);
+        this.typedef_basetype = rule(() => this.context.def.typedef_type)
+            .yields(named("basetype"));
+        this.typedef = rule(this.context.util.block(rule(this.context.kwrd.type, this.context.ws.space1ton, this.typedef_name, optional(this.context.ws.space1ton, this.context.kwrd.is, this.context.ws.space1ton, this.typedef_basetype)), rule(many(either(this.methoddef, this.typedef_member)))))
+            .yields(martha_ast_1.AST.typedef);
+        this.typedefs = rule(many(this.typedef, optional(this.context.ws.ANY_WS)))
+            .yields(martha_ast_1.AST.flatcst);
     }
-    Def.specpredicate = rule(Op.dot, Ref.member, Op.anybinary, either(Val.anyliteral, Ref.member), Op.dot, Ref.member, Op.anybinary, either(Val.anyliteral, Ref.member)
-    // op value (and op value etc...)
-    // .member op value...
-    // predicate function name (where predicate function takes form: bool f(type))
-    );
-    Def.argumentspec = rule("{", Def.specpredicate, "}");
-    Def.argumentdef = rule(Ref.varname, ":", Ref.typename, optional(Def.argumentspec));
-    Def.returntype = rule(Ref.typename, optional(Def.argumentspec));
-    Def.argumentdefs = rule(Def.argumentdef, many(Op.infix_comma, Def.argumentdef));
-    Def.methoddef = rule(Util.block(all(optional(many(Kwrd.anyaccess, Ws.space1ton)), optional(Kwrd.static, Ws.space1ton), optional(Kwrd.async, Ws.space1ton), optional(Kwrd.atomic, Ws.space1ton), either(all(Def.returntype, Ws.space1ton, token("name", /w+/)), Kwrd.ctor), optional("(", optional(Def.argumentdefs), ")")), Stmt.statement))
-        .yields(martha_ast_1.AST.exp);
-    Def.membernames = rule(Ref.member, many(optional(Op.infix_comma, Ref.member)))
-        .yields(function (result, cst) {
-        return flat(cst);
-    });
-    return Def;
-}());
+}
 exports.Def = Def;
-var Mod = /** @class */ (function () {
-    function Mod() {
+class ParserContext {
+    constructor() {
+        // defs
+        this.macroDefs = [];
+        this.ruleRegistry = [];
+        this.op = new Op();
+        this.mcro = new Mcro();
+        this.ctx = new Ctx(this);
+        this.kwrd = new Kwrd(this);
+        this.ws = new Ws(this);
+        this.util = new Util(this);
+        this.ref = new Ref(this);
+        this.val = new Val(this);
+        this.exp = new Exp(this);
+        this.stmt = new Stmt(this);
+        this.def = new Def(this);
+        this.imports = rule(optional(this.def.importdefs));
+        this.macros = rule(optional(this.def.macrodefs));
+        this.types = rule(optional(this.def.typedefs));
+        this.statements = rule(many(this.stmt.statement));
+        this.program = rule(this.ws.ANY_WS, this.imports, this.macros, this.types);
+        // register built in rules
+        this.addRuleInternal({ id: "$statement",
+            rule: rule(() => this.stmt.statement),
+            add: (r) => {
+                //
+                console.log("STATEMENT INSERT");
+            }
+        });
+        this.addRuleInternal({ id: "$atom.reference",
+            rule: this.ref.member,
+            add: (r) => {
+                //
+                console.log("ATOMREFERENCE INSERT");
+            }
+        });
+        this.addRuleInternal({ id: "$atom.range",
+            rule: this.exp.expr7infix,
+            add: (r) => {
+                //
+                console.log("ATOMRANGE INSERT");
+            }
+        });
+        this.addRuleInternal({ id: "$atom",
+            rule: this.exp.subatom,
+            add: (r) => {
+                //
+                console.log("ATOM INSERT");
+                this.exp.atominsert.push(r);
+            }
+        });
     }
-    Mod.typedef_name = rule(Ref.typename, many(optional(Op.infix_comma, Ref.typename)))
-        .yields(martha_ast_1.AST.typedef_name);
-    Mod.typedef_member = rule(Ref.typename, Op.infix_colon, Def.membernames)
-        .yields(martha_ast_1.AST.typedef_member);
-    Mod.typedef_basetype = rule(Ref.typename)
-        .yields(martha_ast_1.AST.typedef_basetype);
-    Mod.typedef = rule(Util.block(Kwrd.type, Mod.typedef_name), optional(Util.block(Kwrd.is, Mod.typedef_basetype)), optional(Util.block(Kwrd.with, Mod.typedef_member)))
-        .yields(martha_ast_1.AST.typedef);
-    Mod.typedefs = rule(many(Mod.typedef, optional(Ws.ANY_WS))).yields(martha_ast_1.AST.flatcst);
-    return Mod;
-}());
-exports.Mod = Mod;
-/*
-Ditto.tests.forEach(test => {
-    var k:{actual:any, expected:any, source:string} = test();
-    if (JSON.stringify(k.actual) !== JSON.stringify(k.expected)) {
-        console.error(`[${k.source}]\r\n
-        \tyields error:\r\n\texpected\r\n
-        \t"${JSON.stringify(k.expected)}"\r\n
-        \tgot\r\n
-        \t"${JSON.stringify(k.actual)}"`);
+    getRuleAdder(id) {
+        const rule = this.ruleRegistry.find(r => r.id === id);
+        if (rule) {
+            return rule.add;
+        }
+        throw new Error(`No rule exists for ${id}. If this is a macro it must be imported.`);
     }
-});
-
-let source:string = `
-type:
-    Party
-is:
-    Address
-
-type:
-    Buyer, Seller, BuyerRep, SellerRep
-is:
-    SomeBaseType
-with:
-    Party: this
-    bool: sentCloseRequest
-constructor:
-    k = [10, a, b()]
-    a = 10
-    b = 20
-    (z = 10)
-    k = foo(10)
-    d, e = get2things
-    call(10)
-    call(a(b(c(10, 90))))
-atomic void record(items{.len > 0}:Array[], f{> 0}:Int, flag:bool, ref z:Vector<string>)
-    ledger.process(sum)
-    total += f
-atomic int{> 0} send(to:Address, amount:int{> 0})
-    do(bad(stuff[0].with("stuff".length)))
-`;
-
-parse(source)
-(
-    Ws.ANY_WS,
-    rule(Mod.typedefs).yields((_:any, cst:any) => {
-        // tslint:disable-next-line:no-debugger
-        // debugger;
-        prettyprint(cst);
-    }),
-    rule("operator:", Ws.IND_WS, /\w+/, /\w+/)
-);
-*/ 
+    getRuleRef(id) {
+        const rule = this.ruleRegistry.find(r => r.id == id);
+        if (rule && rule.rule) {
+            return rule.rule;
+        }
+        throw new Error(`No rule exists for ${id}. If this is a macro it must be imported.`);
+    }
+    addRuleInternal(ref) {
+        this.ruleRegistry.push(ref);
+    }
+    addRule(ref) {
+        console.log("adding rule", ref);
+        this.ruleRegistry.push(ref);
+        const target = this.ruleRegistry.find(x => x.id == ref.targetRuleId);
+        console.log("target", ref.rule);
+        if (target && ref.rule) {
+            target.add(ref.rule);
+        }
+    }
+    addMacro(macro) {
+        console.log("## VISIT MACRO");
+        const identity = (x) => x.name;
+        if (this.macroDefs.find(x => identity(x) === identity(macro))) {
+            throw new Error(`Macro ${identity(macro)} is already registered.`);
+        }
+        /*
+        let parts = macro.rule.map((t:string) => {
+            if (t.startsWith("$")) {
+                return this.getRuleRef(t)
+            } else {
+                return this.ws.lr0ton(token(t, t))
+            }
+        })
+        console.log(parts)
+        this.macroDefs.push(macro)
+        this.addRule({
+            id: `$${macro.name}`,
+            targetRuleId: macro.as,
+            add: this.getRuleAdder(macro.as),
+            rule: rule(...parts).yields(AST.expandmacro(macro))
+        }) */
+    }
+    parse(source, identity) {
+        let program = new martha_program_1.ProgramDef();
+        program.identity = identity;
+        parse(source)(this.ws.ANY_WS, this.program
+            .yields((_, cst) => {
+            const fcst = flat(cst);
+            program.imports = fcst.filter(x => x instanceof martha_emit_1.ImportDef) || [];
+            program.macros = fcst.filter(x => x instanceof martha_emit_1.MacroDef) || [];
+            program.types = fcst.filter(x => x instanceof martha_emit_1.TypeDef) || [];
+            // TODO program.statements = fcst.filter(x => x instanceof Statement)
+        }));
+        return program;
+    }
+}
+exports.ParserContext = ParserContext;
 //# sourceMappingURL=martha.grammar.js.map

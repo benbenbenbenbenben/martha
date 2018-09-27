@@ -1,0 +1,404 @@
+{
+  "identity": "C:\\Users\\ben\\Source\\Repos\\martha\\src\\test../../genesis/IToken.ma",
+  "imports": [],
+  "macros": [],
+  "types": [
+    {
+      "__TYPE__": "TypeDef",
+      "name": {
+        "value": "IToken",
+        "index": 5
+      },
+      "members": [],
+      "methods": [
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "name",
+            "index": 35
+          },
+          "attributes": [],
+          "accessors": [
+            {
+              "value": "abstract",
+              "index": 18
+            }
+          ],
+          "arguments": [],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "pass",
+                    "index": 43
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "string",
+                    "index": 27
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "symbol",
+            "index": 70
+          },
+          "attributes": [],
+          "accessors": [
+            {
+              "value": "abstract",
+              "index": 53
+            }
+          ],
+          "arguments": [],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "pass",
+                    "index": 80
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "string",
+                    "index": 62
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "decimals",
+            "index": 105
+          },
+          "attributes": [],
+          "accessors": [
+            {
+              "value": "abstract",
+              "index": 90
+            }
+          ],
+          "arguments": [],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "pass",
+                    "index": 117
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "byte",
+                    "index": 99
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "totalSupply",
+            "index": 142
+          },
+          "attributes": [],
+          "accessors": [
+            {
+              "value": "abstract",
+              "index": 127
+            }
+          ],
+          "arguments": [],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "pass",
+                    "index": 157
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "uint",
+                    "index": 136
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "balanceOf",
+            "index": 184
+          },
+          "attributes": [],
+          "accessors": [
+            {
+              "value": "abstract",
+              "index": 167
+            }
+          ],
+          "arguments": [
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "address",
+                "index": 202
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "Address",
+                        "index": 194
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": []
+            }
+          ],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "pass",
+                    "index": 212
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "number",
+                    "index": 176
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "transfer",
+            "index": 237
+          },
+          "attributes": [],
+          "accessors": [
+            {
+              "value": "abstract",
+              "index": 222
+            }
+          ],
+          "arguments": [
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "from",
+                "index": 264
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "witnessed",
+                        "index": 246
+                      }
+                    },
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "Address",
+                        "index": 256
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": []
+            },
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "to",
+                "index": 278
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "Address",
+                        "index": 270
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": []
+            },
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "amount",
+                "index": 289
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "number",
+                        "index": 282
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": []
+            }
+          ],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "pass",
+                    "index": 298
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "bool",
+                    "index": 231
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,36 +1,56 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var chai_1 = require("chai");
 require("mocha");
-var tibu_1 = require("tibu");
-var martha_grammar_1 = require("../martha.grammar");
-describe("Martha!", function () {
-    // type name
-    describe("basic types", function () {
-        it("should parse type name", function () {
-            chai_1.expect(tibu_1.Tibu.parse("Foo")(martha_grammar_1.Mod.typedef_name)).to.deep.eq([{ name: ["Foo"] }]);
+const martha_1 = require("../martha");
+describe("Martha!", () => {
+    it('compiles a macro program', () => {
+        let martha = new martha_1.Martha();
+        let program0 = martha.parse({ source: `
+import core
+
+macro: foringenerator
+as $atom (for $atom.reference in $atom.range):
+    $atom.parent.bind $atom.reference $atom.range.current
+    emit(Generator, {
+        next = $atom.range.next
+        current = $statement
+    })
+`,
+            identity: ""
         });
-        it("should parse a base type name", function () {
-            chai_1.expect(tibu_1.Tibu.parse("Bar")(martha_grammar_1.Mod.typedef_basetype)).to.deep.eq([{ basetype: ["Bar"] }]);
-        });
-        it("should parse a type member", function () {
-            chai_1.expect(tibu_1.Tibu.parse("Type: Member")(martha_grammar_1.Mod.typedef_member)).to.deep.eq([{ members: [{ type: "Type", name: "Member" }] }]);
-        });
-        it("should parse a type with a base type", function () {
-            chai_1.expect(tibu_1.Tibu.parse("type: Foo is: Bar")(martha_grammar_1.Mod.typedef)).to.deep.eq([{ types: [{ name: "Foo", basetype: "Bar" }] }]);
-        });
-        it("should parse a basic type", function () {
-            chai_1.expect(tibu_1.Tibu.parse("type: Foo")(martha_grammar_1.Mod.typedef)).to.deep.eq([{ types: [{ name: "Foo" }] }]);
-        });
-        it("should parse a basic type with a member variable", function () {
-            chai_1.expect(tibu_1.Tibu.parse("type: Foo is: Bar with:\n    Party: this")(martha_grammar_1.Mod.typedef))
-                .to.deep.eq([{ types: [{ name: "Foo", basetype: "Bar", members: [{ type: "Party", name: "this" }] }] }]);
-        });
-        it("should parse a 1+n type with member variables", function () {
-            chai_1.expect(tibu_1.Tibu.parse("type: Foo, Bar is: Base with:\n    Addr: addr0, addr1")(martha_grammar_1.Mod.typedefs)).to.deep.eq([[
-                    { types: [{ name: "Foo", basetype: "Base", members: [{ type: "Addr", name: "addr0" }, { type: "Addr", name: "addr1" }] }] }
-                ]]);
-        });
+        console.log(program0.macros[0].rules);
+        martha.load(program0);
+        let program1 = martha.parse({ source: `
+type:
+	Party
+is:
+	Address
+
+type:
+	Buyer, Seller, BuyerRep, SellerRep
+is:
+	SomeBaseType
+with:
+    Party: this
+    bool: sentCloseRequest
+constructor:
+    a = 10
+    b = 20
+    let d e = get2things
+    call(10)
+    call(a(b(c(10, 90))))
+    z = g => x => g ** x
+    j = 4 * u for u in 1..10
+atomic void record(Array[]:items{.len > 0}, int:f{> 0}, bool:flag, ref Vector<string>:s)
+    ledger.process(sum)
+    total += f
+atomic int{> 0} send(Address:to, int:amount{> 0})
+    do(bad(stuff[0].with("stuff".length)))
+
+`,
+            identity: "" });
+        console.log(program1.types[1]);
+        martha.load(program1);
     });
 });
 //# sourceMappingURL=martha.spec.js.map

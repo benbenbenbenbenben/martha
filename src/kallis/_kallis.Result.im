@@ -1,0 +1,851 @@
+{
+  "identity": "",
+  "imports": [
+    {
+      "__TYPE__": "ImportDef",
+      "name": {
+        "value": "kallis",
+        "index": 7
+      }
+    }
+  ],
+  "macros": [],
+  "types": [
+    {
+      "__TYPE__": "TypeDef",
+      "name": {
+        "value": "Result",
+        "index": 22
+      },
+      "members": [
+        {
+          "__TYPE__": "MemberDef",
+          "type": {
+            "__TYPE__": "TypeRef",
+            "nameref": [
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "bool",
+                  "index": 35
+                }
+              }
+            ],
+            "types": [],
+            "indexer": []
+          },
+          "name": {
+            "value": "success",
+            "index": 41
+          },
+          "getter": [],
+          "setter": []
+        },
+        {
+          "__TYPE__": "MemberDef",
+          "type": {
+            "__TYPE__": "TypeRef",
+            "nameref": [
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "int",
+                  "index": 62
+                }
+              }
+            ],
+            "types": [],
+            "indexer": []
+          },
+          "name": {
+            "value": "startloc",
+            "index": 67
+          },
+          "getter": [],
+          "setter": []
+        },
+        {
+          "__TYPE__": "MemberDef",
+          "type": {
+            "__TYPE__": "TypeRef",
+            "nameref": [
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "int",
+                  "index": 85
+                }
+              }
+            ],
+            "types": [],
+            "indexer": []
+          },
+          "name": {
+            "value": "endloc",
+            "index": 90
+          },
+          "getter": [],
+          "setter": []
+        },
+        {
+          "__TYPE__": "MemberDef",
+          "type": {
+            "__TYPE__": "TypeRef",
+            "nameref": [
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "string",
+                  "index": 106
+                }
+              }
+            ],
+            "types": [],
+            "indexer": []
+          },
+          "name": {
+            "value": "value",
+            "index": 114
+          },
+          "getter": [],
+          "setter": []
+        },
+        {
+          "__TYPE__": "MemberDef",
+          "type": {
+            "__TYPE__": "TypeRef",
+            "nameref": [
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "Result",
+                  "index": 130
+                }
+              }
+            ],
+            "types": [],
+            "indexer": [
+              {
+                "__TYPE__": "TypeRef",
+                "nameref": [],
+                "types": [],
+                "indexer": []
+              }
+            ]
+          },
+          "name": {
+            "value": "children",
+            "index": 140
+          },
+          "getter": [],
+          "setter": []
+        },
+        {
+          "__TYPE__": "MemberDef",
+          "type": {
+            "__TYPE__": "TypeRef",
+            "nameref": [
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "object",
+                  "index": 159
+                }
+              }
+            ],
+            "types": [],
+            "indexer": []
+          },
+          "name": {
+            "value": "yielded",
+            "index": 167
+          },
+          "getter": [],
+          "setter": []
+        }
+      ],
+      "methods": [
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "fault",
+            "index": 195
+          },
+          "attributes": [],
+          "accessors": [
+            {
+              "value": "static",
+              "index": 180
+            }
+          ],
+          "arguments": [
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "input",
+                "index": 207
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "Input",
+                        "index": 201
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": []
+            }
+          ],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Apply",
+                  "apply": {
+                    "__TYPE__": "BracketCurly",
+                    "statements": [
+                      {
+                        "__TYPE__": "Assignment",
+                        "left": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "startloc",
+                            "index": 257
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "input.location",
+                            "index": 268
+                          }
+                        }
+                      },
+                      {
+                        "__TYPE__": "Assignment",
+                        "left": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "endloc",
+                            "index": 296
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "input.location",
+                            "index": 305
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "to": {
+                    "__TYPE__": "Apply",
+                    "apply": {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "Result",
+                        "index": 235
+                      }
+                    },
+                    "to": {
+                      "__TYPE__": "Apply",
+                      "apply": {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "new",
+                          "index": 231
+                        }
+                      },
+                      "to": {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "return",
+                          "index": 224
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "Result",
+                    "index": 187
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "pass",
+            "index": 351
+          },
+          "attributes": [],
+          "accessors": [
+            {
+              "value": "static",
+              "index": 336
+            }
+          ],
+          "arguments": [
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "input",
+                "index": 362
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "Input",
+                        "index": 356
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": []
+            }
+          ],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Apply",
+                  "apply": {
+                    "__TYPE__": "BracketCurly",
+                    "statements": [
+                      {
+                        "__TYPE__": "Assignment",
+                        "left": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "success",
+                            "index": 407
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "Literal",
+                          "type": "bool",
+                          "value": {
+                            "value": "true",
+                            "index": 417
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "to": {
+                    "__TYPE__": "Apply",
+                    "apply": {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "fault",
+                        "index": 386
+                      }
+                    },
+                    "to": {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "return",
+                        "index": 379
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "Result",
+                    "index": 343
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "composite",
+            "index": 453
+          },
+          "attributes": [],
+          "accessors": [
+            {
+              "value": "static",
+              "index": 438
+            }
+          ],
+          "arguments": [
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "results",
+                "index": 475
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "Result",
+                        "index": 466
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": [
+                    {
+                      "__TYPE__": "TypeRef",
+                      "nameref": [],
+                      "types": [],
+                      "indexer": []
+                    }
+                  ]
+                }
+              ],
+              "spec": []
+            }
+          ],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Apply",
+                  "apply": {
+                    "__TYPE__": "BracketCurly",
+                    "statements": [
+                      {
+                        "__TYPE__": "Assignment",
+                        "left": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "success",
+                            "index": 527
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "Dot",
+                          "left": {
+                            "__TYPE__": "Apply",
+                            "apply": {
+                              "__TYPE__": "BracketParen",
+                              "statements": [
+                                {
+                                  "__TYPE__": "Lambda",
+                                  "name": "r",
+                                  "accessors": [],
+                                  "arguments": [],
+                                  "body": [
+                                    {
+                                      "__TYPE__": "Reference",
+                                      "name": {
+                                        "value": "r.success",
+                                        "index": 554
+                                      }
+                                    }
+                                  ],
+                                  "return": {
+                                    "__TYPE__": "ReturnDef",
+                                    "type": {
+                                      "__TYPE__": "TypeRef"
+                                    },
+                                    "spec": []
+                                  }
+                                }
+                              ]
+                            },
+                            "to": {
+                              "__TYPE__": "Reference",
+                              "name": {
+                                "value": "results.map",
+                                "index": 537
+                              }
+                            }
+                          },
+                          "right": {
+                            "__TYPE__": "Apply",
+                            "apply": {
+                              "__TYPE__": "BracketParen",
+                              "statements": [
+                                {
+                                  "__TYPE__": "Lambda",
+                                  "name": "p",
+                                  "accessors": [],
+                                  "arguments": [],
+                                  "body": [
+                                    {
+                                      "__TYPE__": "AmpAmp",
+                                      "left": {
+                                        "__TYPE__": "Reference",
+                                        "name": {
+                                          "value": "p",
+                                          "index": 582
+                                        }
+                                      },
+                                      "right": {
+                                        "__TYPE__": "Reference",
+                                        "name": {
+                                          "value": "c",
+                                          "index": 587
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "return": {
+                                    "__TYPE__": "ReturnDef",
+                                    "type": {
+                                      "__TYPE__": "TypeRef"
+                                    },
+                                    "spec": []
+                                  }
+                                }
+                              ]
+                            },
+                            "to": {
+                              "__TYPE__": "Reference",
+                              "name": {
+                                "value": "reduce",
+                                "index": 565
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "__TYPE__": "Assignment",
+                        "left": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "children",
+                            "index": 603
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "results",
+                            "index": 614
+                          }
+                        }
+                      },
+                      {
+                        "__TYPE__": "Assignment",
+                        "left": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "startloc",
+                            "index": 635
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "Dot",
+                          "left": {
+                            "__TYPE__": "Apply",
+                            "apply": {
+                              "__TYPE__": "BracketArray",
+                              "statements": [
+                                {
+                                  "__TYPE__": "Literal",
+                                  "type": "integer",
+                                  "value": {
+                                    "value": "0",
+                                    "index": 654
+                                  }
+                                }
+                              ]
+                            },
+                            "to": {
+                              "__TYPE__": "Reference",
+                              "name": {
+                                "value": "results",
+                                "index": 646
+                              }
+                            }
+                          },
+                          "right": {
+                            "__TYPE__": "Reference",
+                            "name": {
+                              "value": "startloc",
+                              "index": 657
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "__TYPE__": "Assignment",
+                        "left": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "endloc",
+                            "index": 679
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "Dot",
+                          "left": {
+                            "__TYPE__": "Apply",
+                            "apply": {
+                              "__TYPE__": "BracketArray",
+                              "statements": [
+                                {
+                                  "__TYPE__": "Minus_Prefix",
+                                  "value": {
+                                    "__TYPE__": "Literal",
+                                    "type": "integer",
+                                    "value": {
+                                      "value": "1",
+                                      "index": 697
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "to": {
+                              "__TYPE__": "Reference",
+                              "name": {
+                                "value": "results",
+                                "index": 688
+                              }
+                            }
+                          },
+                          "right": {
+                            "__TYPE__": "Reference",
+                            "name": {
+                              "value": "endloc",
+                              "index": 700
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "__TYPE__": "Assignment",
+                        "left": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "yielded",
+                            "index": 720
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "Gt",
+                          "left": {
+                            "__TYPE__": "Dot",
+                            "left": {
+                              "__TYPE__": "Dot",
+                              "left": {
+                                "__TYPE__": "Apply",
+                                "apply": {
+                                  "__TYPE__": "BracketParen",
+                                  "statements": [
+                                    {
+                                      "__TYPE__": "Lambda",
+                                      "name": "r",
+                                      "accessors": [],
+                                      "arguments": [],
+                                      "body": [
+                                        {
+                                          "__TYPE__": "Reference",
+                                          "name": {
+                                            "value": "r.yielded",
+                                            "index": 747
+                                          }
+                                        }
+                                      ],
+                                      "return": {
+                                        "__TYPE__": "ReturnDef",
+                                        "type": {
+                                          "__TYPE__": "TypeRef"
+                                        },
+                                        "spec": []
+                                      }
+                                    }
+                                  ]
+                                },
+                                "to": {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "results.map",
+                                    "index": 730
+                                  }
+                                }
+                              },
+                              "right": {
+                                "__TYPE__": "Apply",
+                                "apply": {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "when",
+                                    "index": 786
+                                  }
+                                },
+                                "to": {
+                                  "__TYPE__": "Apply",
+                                  "apply": {
+                                    "__TYPE__": "BracketParen",
+                                    "statements": [
+                                      {
+                                        "__TYPE__": "Lambda",
+                                        "name": "y",
+                                        "accessors": [],
+                                        "arguments": [],
+                                        "body": [
+                                          {
+                                            "__TYPE__": "EqEq",
+                                            "left": {
+                                              "__TYPE__": "Reference",
+                                              "name": {
+                                                "value": "y",
+                                                "index": 770
+                                              }
+                                            },
+                                            "right": {
+                                              "__TYPE__": "Reference",
+                                              "name": {
+                                                "value": "undefined",
+                                                "index": 775
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "return": {
+                                          "__TYPE__": "ReturnDef",
+                                          "type": {
+                                            "__TYPE__": "TypeRef"
+                                          },
+                                          "spec": []
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "to": {
+                                    "__TYPE__": "Reference",
+                                    "name": {
+                                      "value": "filter",
+                                      "index": 758
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "right": {
+                              "__TYPE__": "Reference",
+                              "name": {
+                                "value": "length",
+                                "index": 792
+                              }
+                            }
+                          },
+                          "right": {
+                            "__TYPE__": "Literal",
+                            "type": "integer",
+                            "value": {
+                              "value": "0",
+                              "index": 801
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "to": {
+                    "__TYPE__": "Apply",
+                    "apply": {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "Result",
+                        "index": 505
+                      }
+                    },
+                    "to": {
+                      "__TYPE__": "Apply",
+                      "apply": {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "new",
+                          "index": 501
+                        }
+                      },
+                      "to": {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "return",
+                          "index": 494
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "Result",
+                    "index": 445
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        }
+      ]
+    }
+  ]
+}
