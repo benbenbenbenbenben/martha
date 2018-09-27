@@ -1,0 +1,1211 @@
+{
+  "identity": "C:\\Users\\ben\\Source\\Repos\\martha\\src\\test../../genesis/Stake.ma",
+  "imports": [],
+  "macros": [],
+  "types": [
+    {
+      "__TYPE__": "TypeDef",
+      "name": {
+        "value": "Stake",
+        "index": 5
+      },
+      "basetype": {
+        "__TYPE__": "TypeRef",
+        "nameref": [
+          {
+            "__TYPE__": "Reference",
+            "name": {
+              "value": "IToken",
+              "index": 14
+            }
+          }
+        ],
+        "types": [],
+        "indexer": []
+      },
+      "members": [
+        {
+          "__TYPE__": "MemberDef",
+          "type": {
+            "__TYPE__": "TypeRef",
+            "nameref": [
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "storage",
+                  "index": 27
+                }
+              },
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "number",
+                  "index": 35
+                }
+              }
+            ],
+            "types": [],
+            "indexer": [
+              {
+                "__TYPE__": "TypeRef",
+                "nameref": [
+                  {
+                    "__TYPE__": "Reference",
+                    "name": {
+                      "value": "Address",
+                      "index": 42
+                    }
+                  }
+                ],
+                "types": [],
+                "indexer": []
+              }
+            ]
+          },
+          "name": {
+            "value": "accounts",
+            "index": 52
+          },
+          "getter": [],
+          "setter": []
+        },
+        {
+          "__TYPE__": "MemberDef",
+          "type": {
+            "__TYPE__": "TypeRef",
+            "nameref": [
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "storage",
+                  "index": 66
+                }
+              },
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "ITxHook",
+                  "index": 74
+                }
+              }
+            ],
+            "types": [],
+            "indexer": [
+              {
+                "__TYPE__": "TypeRef",
+                "nameref": [
+                  {
+                    "__TYPE__": "Reference",
+                    "name": {
+                      "value": "Address",
+                      "index": 82
+                    }
+                  }
+                ],
+                "types": [],
+                "indexer": []
+              }
+            ]
+          },
+          "name": {
+            "value": "beforetxout",
+            "index": 92
+          },
+          "getter": [],
+          "setter": []
+        },
+        {
+          "__TYPE__": "MemberDef",
+          "type": {
+            "__TYPE__": "TypeRef",
+            "nameref": [
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "storage",
+                  "index": 109
+                }
+              },
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "ITxHook",
+                  "index": 117
+                }
+              }
+            ],
+            "types": [],
+            "indexer": [
+              {
+                "__TYPE__": "TypeRef",
+                "nameref": [
+                  {
+                    "__TYPE__": "Reference",
+                    "name": {
+                      "value": "Address",
+                      "index": 125
+                    }
+                  }
+                ],
+                "types": [],
+                "indexer": []
+              }
+            ]
+          },
+          "name": {
+            "value": "beforetxin",
+            "index": 135
+          },
+          "getter": [],
+          "setter": []
+        },
+        {
+          "__TYPE__": "MemberDef",
+          "type": {
+            "__TYPE__": "TypeRef",
+            "nameref": [
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "storage",
+                  "index": 151
+                }
+              },
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "ITxHook",
+                  "index": 159
+                }
+              }
+            ],
+            "types": [],
+            "indexer": []
+          },
+          "name": {
+            "value": "beforetx",
+            "index": 168
+          },
+          "getter": [],
+          "setter": []
+        }
+      ],
+      "methods": [
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "constructor",
+            "index": 182
+          },
+          "attributes": [],
+          "accessors": [],
+          "arguments": [],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Apply",
+                  "apply": {
+                    "__TYPE__": "BracketParen",
+                    "statements": [
+                      {
+                        "__TYPE__": "Literal",
+                        "type": "string",
+                        "value": {
+                          "value": "\"dcdc.stakeholders\"",
+                          "index": 222
+                        }
+                      },
+                      {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "this",
+                          "index": 243
+                        }
+                      }
+                    ]
+                  },
+                  "to": {
+                    "__TYPE__": "Reference",
+                    "name": {
+                      "value": "registerSysCall",
+                      "index": 206
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "name",
+            "index": 262
+          },
+          "attributes": [],
+          "accessors": [],
+          "arguments": [],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Literal",
+                  "type": "string",
+                  "value": {
+                    "value": "\"Stake\"",
+                    "index": 280
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "string",
+                    "index": 254
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "symbol",
+            "index": 301
+          },
+          "attributes": [],
+          "accessors": [],
+          "arguments": [],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Literal",
+                  "type": "string",
+                  "value": {
+                    "value": "\"STK\"",
+                    "index": 320
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "string",
+                    "index": 293
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "decimals",
+            "index": 337
+          },
+          "attributes": [],
+          "accessors": [],
+          "arguments": [],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Literal",
+                  "type": "integer",
+                  "value": {
+                    "value": "0",
+                    "index": 358
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "byte",
+                    "index": 331
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "totalSupply",
+            "index": 371
+          },
+          "attributes": [],
+          "accessors": [],
+          "arguments": [],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Apply",
+                  "apply": {
+                    "__TYPE__": "Literal",
+                    "type": "integer",
+                    "value": {
+                      "value": "000",
+                      "index": 403
+                    }
+                  },
+                  "to": {
+                    "__TYPE__": "Apply",
+                    "apply": {
+                      "__TYPE__": "Literal",
+                      "type": "integer",
+                      "value": {
+                        "value": "000",
+                        "index": 399
+                      }
+                    },
+                    "to": {
+                      "__TYPE__": "Literal",
+                      "type": "integer",
+                      "value": {
+                        "value": "100",
+                        "index": 395
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "uint",
+                    "index": 365
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "balanceOf",
+            "index": 420
+          },
+          "attributes": [],
+          "accessors": [],
+          "arguments": [
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "address",
+                "index": 438
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "Address",
+                        "index": 430
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": []
+            }
+          ],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Apply",
+                  "apply": {
+                    "__TYPE__": "BracketArray",
+                    "statements": [
+                      {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "address",
+                          "index": 465
+                        }
+                      }
+                    ]
+                  },
+                  "to": {
+                    "__TYPE__": "Reference",
+                    "name": {
+                      "value": "account",
+                      "index": 457
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "number",
+                    "index": 412
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        },
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "transfer",
+            "index": 485
+          },
+          "attributes": [],
+          "accessors": [],
+          "arguments": [
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "from",
+                "index": 512
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "witnessed",
+                        "index": 494
+                      }
+                    },
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "Address",
+                        "index": 504
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": [
+                {
+                  "__TYPE__": "Statement",
+                  "statement": [
+                    {
+                      "__TYPE__": "Apply",
+                      "apply": {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "accounts",
+                          "index": 520
+                        }
+                      },
+                      "to": {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "in",
+                          "index": 517
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "to",
+                "index": 539
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "Address",
+                        "index": 531
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": [
+                {
+                  "__TYPE__": "Statement",
+                  "statement": [
+                    {
+                      "__TYPE__": "Apply",
+                      "apply": {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "accounts",
+                          "index": 545
+                        }
+                      },
+                      "to": {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "in",
+                          "index": 542
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "amount",
+                "index": 563
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "number",
+                        "index": 556
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": [
+                {
+                  "__TYPE__": "Statement",
+                  "statement": [
+                    {
+                      "__TYPE__": "Gt",
+                      "left": {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "this",
+                          "index": 570
+                        }
+                      },
+                      "right": {
+                        "__TYPE__": "Literal",
+                        "type": "integer",
+                        "value": {
+                          "value": "0",
+                          "index": 572
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "IfExp",
+                  "expression": {
+                    "__TYPE__": "Statement",
+                    "statement": [
+                      {
+                        "__TYPE__": "AmpAmp",
+                        "left": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "beforetx",
+                            "index": 589
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "EqEq",
+                          "left": {
+                            "__TYPE__": "Apply",
+                            "apply": {
+                              "__TYPE__": "BracketParen",
+                              "statements": [
+                                {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "from",
+                                    "index": 610
+                                  }
+                                },
+                                {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "to",
+                                    "index": 616
+                                  }
+                                },
+                                {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "amount",
+                                    "index": 620
+                                  }
+                                }
+                              ]
+                            },
+                            "to": {
+                              "__TYPE__": "Reference",
+                              "name": {
+                                "value": "beforetx",
+                                "index": 601
+                              }
+                            }
+                          },
+                          "right": {
+                            "__TYPE__": "Literal",
+                            "type": "bool",
+                            "value": {
+                              "value": "false",
+                              "index": 631
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "body": [
+                    {
+                      "__TYPE__": "Statement",
+                      "statement": [
+                        {
+                          "__TYPE__": "Apply",
+                          "apply": {
+                            "__TYPE__": "Literal",
+                            "type": "bool",
+                            "value": {
+                              "value": "false",
+                              "index": 658
+                            }
+                          },
+                          "to": {
+                            "__TYPE__": "Reference",
+                            "name": {
+                              "value": "return",
+                              "index": 651
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "IfExp",
+                  "expression": {
+                    "__TYPE__": "Statement",
+                    "statement": [
+                      {
+                        "__TYPE__": "AmpAmp",
+                        "left": {
+                          "__TYPE__": "Apply",
+                          "apply": {
+                            "__TYPE__": "BracketArray",
+                            "statements": [
+                              {
+                                "__TYPE__": "Reference",
+                                "name": {
+                                  "value": "from",
+                                  "index": 688
+                                }
+                              }
+                            ]
+                          },
+                          "to": {
+                            "__TYPE__": "Reference",
+                            "name": {
+                              "value": "beforetxout",
+                              "index": 676
+                            }
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "EqEq",
+                          "left": {
+                            "__TYPE__": "Apply",
+                            "apply": {
+                              "__TYPE__": "BracketParen",
+                              "statements": [
+                                {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "from",
+                                    "index": 715
+                                  }
+                                },
+                                {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "to",
+                                    "index": 721
+                                  }
+                                },
+                                {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "amount",
+                                    "index": 725
+                                  }
+                                }
+                              ]
+                            },
+                            "to": {
+                              "__TYPE__": "Apply",
+                              "apply": {
+                                "__TYPE__": "BracketArray",
+                                "statements": [
+                                  {
+                                    "__TYPE__": "Reference",
+                                    "name": {
+                                      "value": "from",
+                                      "index": 709
+                                    }
+                                  }
+                                ]
+                              },
+                              "to": {
+                                "__TYPE__": "Reference",
+                                "name": {
+                                  "value": "beforetxout",
+                                  "index": 697
+                                }
+                              }
+                            }
+                          },
+                          "right": {
+                            "__TYPE__": "Literal",
+                            "type": "bool",
+                            "value": {
+                              "value": "false",
+                              "index": 736
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "body": [
+                    {
+                      "__TYPE__": "Statement",
+                      "statement": [
+                        {
+                          "__TYPE__": "Apply",
+                          "apply": {
+                            "__TYPE__": "Literal",
+                            "type": "bool",
+                            "value": {
+                              "value": "false",
+                              "index": 763
+                            }
+                          },
+                          "to": {
+                            "__TYPE__": "Reference",
+                            "name": {
+                              "value": "return",
+                              "index": 756
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "IfExp",
+                  "expression": {
+                    "__TYPE__": "Statement",
+                    "statement": [
+                      {
+                        "__TYPE__": "AmpAmp",
+                        "left": {
+                          "__TYPE__": "Apply",
+                          "apply": {
+                            "__TYPE__": "BracketArray",
+                            "statements": [
+                              {
+                                "__TYPE__": "Reference",
+                                "name": {
+                                  "value": "to",
+                                  "index": 792
+                                }
+                              }
+                            ]
+                          },
+                          "to": {
+                            "__TYPE__": "Reference",
+                            "name": {
+                              "value": "beforetxin",
+                              "index": 781
+                            }
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "EqEq",
+                          "left": {
+                            "__TYPE__": "Apply",
+                            "apply": {
+                              "__TYPE__": "BracketParen",
+                              "statements": [
+                                {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "from",
+                                    "index": 814
+                                  }
+                                },
+                                {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "to",
+                                    "index": 820
+                                  }
+                                },
+                                {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "amount",
+                                    "index": 824
+                                  }
+                                }
+                              ]
+                            },
+                            "to": {
+                              "__TYPE__": "Apply",
+                              "apply": {
+                                "__TYPE__": "BracketArray",
+                                "statements": [
+                                  {
+                                    "__TYPE__": "Reference",
+                                    "name": {
+                                      "value": "to",
+                                      "index": 810
+                                    }
+                                  }
+                                ]
+                              },
+                              "to": {
+                                "__TYPE__": "Reference",
+                                "name": {
+                                  "value": "beforetxin",
+                                  "index": 799
+                                }
+                              }
+                            }
+                          },
+                          "right": {
+                            "__TYPE__": "Literal",
+                            "type": "bool",
+                            "value": {
+                              "value": "false",
+                              "index": 835
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "body": [
+                    {
+                      "__TYPE__": "Statement",
+                      "statement": [
+                        {
+                          "__TYPE__": "Apply",
+                          "apply": {
+                            "__TYPE__": "Literal",
+                            "type": "bool",
+                            "value": {
+                              "value": "false",
+                              "index": 862
+                            }
+                          },
+                          "to": {
+                            "__TYPE__": "Reference",
+                            "name": {
+                              "value": "return",
+                              "index": 855
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "IfExp",
+                  "expression": {
+                    "__TYPE__": "Statement",
+                    "statement": [
+                      {
+                        "__TYPE__": "Lt",
+                        "left": {
+                          "__TYPE__": "Apply",
+                          "apply": {
+                            "__TYPE__": "BracketArray",
+                            "statements": [
+                              {
+                                "__TYPE__": "Reference",
+                                "name": {
+                                  "value": "from",
+                                  "index": 889
+                                }
+                              }
+                            ]
+                          },
+                          "to": {
+                            "__TYPE__": "Reference",
+                            "name": {
+                              "value": "accounts",
+                              "index": 880
+                            }
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "amount",
+                            "index": 897
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "body": [
+                    {
+                      "__TYPE__": "Statement",
+                      "statement": [
+                        {
+                          "__TYPE__": "Apply",
+                          "apply": {
+                            "__TYPE__": "Literal",
+                            "type": "bool",
+                            "value": {
+                              "value": "false",
+                              "index": 925
+                            }
+                          },
+                          "to": {
+                            "__TYPE__": "Reference",
+                            "name": {
+                              "value": "return",
+                              "index": 918
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "IfExp",
+                  "expression": {
+                    "__TYPE__": "Statement",
+                    "statement": [
+                      {
+                        "__TYPE__": "EqEq",
+                        "left": {
+                          "__TYPE__": "Apply",
+                          "apply": {
+                            "__TYPE__": "BracketArray",
+                            "statements": [
+                              {
+                                "__TYPE__": "Reference",
+                                "name": {
+                                  "value": "from",
+                                  "index": 952
+                                }
+                              }
+                            ]
+                          },
+                          "to": {
+                            "__TYPE__": "Reference",
+                            "name": {
+                              "value": "accounts",
+                              "index": 943
+                            }
+                          }
+                        },
+                        "right": {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "amount",
+                            "index": 961
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "body": [
+                    {
+                      "__TYPE__": "Statement",
+                      "statement": [
+                        {
+                          "__TYPE__": "Apply",
+                          "apply": {
+                            "__TYPE__": "BracketArray",
+                            "statements": [
+                              {
+                                "__TYPE__": "Reference",
+                                "name": {
+                                  "value": "from",
+                                  "index": 998
+                                }
+                              }
+                            ]
+                          },
+                          "to": {
+                            "__TYPE__": "Apply",
+                            "apply": {
+                              "__TYPE__": "Reference",
+                              "name": {
+                                "value": "accounts",
+                                "index": 989
+                              }
+                            },
+                            "to": {
+                              "__TYPE__": "Reference",
+                              "name": {
+                                "value": "delete",
+                                "index": 982
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "else",
+                    "index": 1013
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "bool",
+                    "index": 479
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        }
+      ]
+    }
+  ]
+}

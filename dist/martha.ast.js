@@ -13,9 +13,12 @@ const flat = (arr) => {
 const isa = (T) => (x) => {
     return x instanceof T;
 };
-const named = (cst, name) => {
+const namedmany = (cst, name) => {
     const fcst = flat(cst);
-    return fcst.find(x => x.named === name);
+    return fcst.filter(x => x.named === name);
+};
+const named = (cst, name) => {
+    return namedmany(cst, name).length > 0 ? namedmany(cst, name)[0] : undefined;
 };
 class AST {
     static anyaccess(result, cst) {
@@ -42,16 +45,22 @@ class AST {
             }
             else {
                 modcst.unshift({ op: result.tokens[0].name });
-                modcst.unshift(emit(martha_emit_1.Reference, { name: "this" }));
+                modcst.unshift(emit(martha_emit_1.Reference, {
+                    name: {
+                        value: "this",
+                        index: result.tokens[0].result.startloc
+                    }
+                }));
             }
         }
         return modcst;
     }
     static argumentdef(result, cst) {
+        let argspec = named(flat(cst), "argspec");
         return emit(martha_emit_1.ArgumentDef, {
-            type: result.get("typename"),
             name: result.one("varname"),
-            spec: cst ? flat(flat(cst).filter(isa(martha_emit_1.Statement)).map(x => x.statement)) : [],
+            type: cst ? flat(cst).filter(isa(martha_emit_1.TypeRef)) : [],
+            spec: argspec ? flat(argspec.cst) : []
         });
     }
     static argumentdefs(result, cst) {
@@ -61,71 +70,73 @@ class AST {
         };
     }
     static returndef(result, cst) {
+        let argspec = named(flat(cst), "argspec");
         return emit(martha_emit_1.ReturnDef, {
-            type: result.one("typename"),
-            spec: cst ? flat(flat(cst).filter(isa(martha_emit_1.Statement)).map(x => x.statement)) : []
+            type: flat(cst)[0],
+            spec: argspec ? flat(argspec.cst) : []
         });
     }
     static methoddef(result, cst) {
-        console.log(21);
+        let fcst = flat(cst);
+        let accessors = named(fcst, "accessors");
+        let returndef = cst && flat(cst).find((x) => x instanceof martha_emit_1.ReturnDef);
         return emit(martha_emit_1.MethodDef, {
-            name: result.one("ctor") || result.one("name"),
-            access: cst && flat(cst).find(x => x instanceof martha_emit_1.MethodAccess),
-            export: result.get("export") !== null,
-            extern: result.get("extern") !== null,
-            async: result.get("async") !== null,
-            atomic: result.get("atomic") !== null,
-            critical: result.get("critical") !== null,
+            // TODO: new Token s/c because unknown definitily typed behaviour around ||
+            name: result.one("ctor") || result.one("name") || new martha_emit_1.Token(),
+            attributes: cst && flat(cst).filter(isa(martha_emit_1.Attribute)),
+            accessors: accessors.result.tokens.map((t) => emit(martha_emit_1.Token, { value: t.result.value, index: t.result.startloc })),
             arguments: cst ? flat(flat(cst).filter((x) => x.op == "argdefs").map((x) => x.parameters)) : [],
             body: cst ? flat(cst).filter((x) => x instanceof martha_emit_1.Statement) : [],
-            return: cst && flat(cst).find((x) => x instanceof martha_emit_1.ReturnDef),
+            return: returndef,
         });
     }
     static typedef(result, cst) {
-        const fcst = flat(cst);
+        let fcst = flat(cst);
+        let basetype = named(fcst, "basetype");
         let types = fcst
             .filter(x => x)
-            .filter(x => x.typename)
+            .filter(t => t.typename)
             .map((name) => {
             return name.typename.map((name) => {
                 let type = {
-                    name
+                    name,
+                    basetype: basetype ? flat(basetype.cst)[0] : undefined
                 };
-                flat(cst).filter(x => x).forEach(part => {
-                    if (part.basetype) {
-                        type.basetype = part.basetype[0];
-                    }
-                    if (part.members) {
-                        type.members = type.members ? [...type.members, ...part.members]
-                            : [...part.members];
-                    }
-                });
-                type.methods = fcst.filter(x => isa(martha_emit_1.MethodDef)(x));
+                type.members = fcst.filter(isa(martha_emit_1.MemberDef));
+                type.methods = fcst.filter(isa(martha_emit_1.MethodDef));
                 return emit(martha_emit_1.TypeDef, type);
             });
         });
         return flat(types);
     }
+    static typedef_index(result, cst) {
+        //console.log(flat(flat(namedmany(cst, "types"))[0].cst))
+        let ref = emit(martha_emit_1.TypeRef, {
+            nameref: cst ? flat(namedmany(cst, "name").map(c => c.cst)) : undefined,
+            types: cst ? flat(namedmany(cst, "types").map(c => AST.typedef_index(result, c.cst))) : undefined,
+            indexer: cst ? flat(namedmany(cst, "indexer").map(c => AST.typedef_index(result, c.cst || []))) : undefined,
+        });
+        return ref;
+        // return cst ? (result.get("typename") || []).concat([{index:flat(cst)}]) : result.get("typename")
+    }
+    static typedef_type(result, cst) {
+        return AST.typedef_index(result, cst);
+    }
     static typedef_member(result, cst) {
-        return {
-            members: flat(cst)
-                .filter(x => isa(martha_emit_1.Reference)(x))
-                .map(x => {
-                return {
-                    type: result.get("typename"),
-                    name: x.name
-                };
-            })
-        };
+        // TODO: memberdef type
+        let fcst = flat(cst).filter(x => x);
+        return fcst
+            .filter(isa(martha_emit_1.Reference))
+            .map(x => emit(martha_emit_1.MemberDef, {
+            type: fcst[0],
+            name: x.name,
+            getter: named(fcst, "getter") ? named(fcst, "getter").cst : [],
+            setter: named(fcst, "setter") ? named(fcst, "setter").cst : [],
+        }));
     }
     static typedef_name(result, cst) {
         return {
             typename: result.get("typename")
-        };
-    }
-    static typedef_basetype(result, cst) {
-        return {
-            basetype: result.get("typename")
         };
     }
     static atomlambdaliteral(result, cst) {
@@ -133,13 +144,13 @@ class AST {
         const body = named(cst, "body");
         let lambda = emit(martha_emit_1.Lambda, {
             name: spec.result.tokens[0].result.value,
-            access: undefined,
-            async: false,
-            atomic: false,
-            critical: false,
+            accessors: [],
             arguments: [],
             body: flat(body.cst),
-            return: emit(martha_emit_1.ReturnDef, { type: "computed", spec: "computed" })
+            return: emit(martha_emit_1.ReturnDef, {
+                type: emit(martha_emit_1.TypeRef, {}),
+                spec: []
+            })
         });
         return lambda;
     }
@@ -163,7 +174,7 @@ class AST {
     static atomliteral(result, cst) {
         return emit(martha_emit_1.Literal, {
             type: result.tokens[0].name,
-            value: result.tokens[0].result.value
+            value: { value: result.tokens[0].result.value, index: result.tokens[0].result.startloc }
         });
     }
     static atomarrliteral(result, cst) {
@@ -172,14 +183,16 @@ class AST {
             parameters: cst === undefined ? [] : flat(cst)
         };
     }
-    static atomobjliteral(result, cst) {
+    /*
+    static atomobjliteral(result:ResultTokens, cst:any):any {
         return {
-            op: "literal",
+            op:"literal",
             parameters: result.get("member")
-                ? ["object", ...result.get("member").map((m, i) => { return { op: "assign", parameters: [m, ...flat(cst)[i]] }; })]
-                : ["object"]
+            ? ["object", ...result.get("member").map((m:string,i:any) => { return { op:"assign", parameters:[m, ...flat(cst)[i]] };})]
+            : ["object"]
         };
     }
+    */
     static atommember(result, cst) {
         return flat(cst);
     }
@@ -187,7 +200,7 @@ class AST {
         let f = flat(cst);
         if (f.length > 1) {
             //return { apply: f.slice(1), to: f[0] }
-            return f.reduce((a, b) => { return { apply: b, to: a }; });
+            return f.reduce((a, b) => emit(martha_emit_1.Apply, { apply: b, to: a }));
         }
         return flat(cst);
     }
@@ -209,7 +222,10 @@ class AST {
     }
     static reference(result, cst) {
         return emit(martha_emit_1.Reference, {
-            name: result.get("member").join(".")
+            name: {
+                value: result.get("member").map(v => v.value).join("."),
+                index: result.one("member").index
+            }
         });
     }
     static push(result, cst) {
@@ -235,13 +251,19 @@ class AST {
         return { target: flat(cst) };
     }
     static bracketparen(result, cst) {
-        return { bracketparen: cst ? flat(cst) : [] };
+        return emit(martha_emit_1.BracketParen, {
+            statements: cst ? flat(cst) : []
+        });
     }
     static bracketarray(result, cst) {
-        return { bracketarray: cst ? flat(cst) : [] };
+        return emit(martha_emit_1.BracketArray, {
+            statements: cst ? flat(cst) : []
+        });
     }
     static bracketcurly(result, cst) {
-        return { bracketcurly: cst ? flat(cst) : [] };
+        return emit(martha_emit_1.BracketCurly, {
+            statements: cst ? flat(cst) : []
+        });
     }
     static commaexpr(result, cst) {
         let fcst = flat(cst);
@@ -265,8 +287,15 @@ class AST {
             let op = new martha_grammar_1.Op();
             switch (result.tokens.shift().name) {
                 case op.dot.__token__: return (isa(martha_emit_1.Reference)(left) && isa(martha_emit_1.Reference)(right))
-                    ? emit(martha_emit_1.Reference, { name: `${left.name}.${right.name}` })
+                    ? emit(martha_emit_1.Reference, {
+                        name: emit(martha_emit_1.Token, {
+                            value: `${left.name.value}.${right.name.value}`,
+                            index: left.name.index
+                        })
+                    })
                     : emit(martha_emit_1.Dot, { left, right });
+                case op.ques.__token__: return emit(martha_emit_1.QuesBin, { left, right });
+                case op.colon.__token__: return emit(martha_emit_1.ColonBin, { left, right });
                 case op.mult.__token__: return emit(martha_emit_1.Mult, { left, right });
                 case op.power.__token__: return emit(martha_emit_1.Power, { left, right });
                 case op.div.__token__: return emit(martha_emit_1.Div, { left, right });
@@ -342,7 +371,12 @@ class AST {
         return flat(cst);
     }
     static thisref(result, cst) {
-        return emit(martha_emit_1.Reference, { name: "this" });
+        return emit(martha_emit_1.Reference, {
+            name: emit(martha_emit_1.Token, {
+                value: "this",
+                index: result.tokens[0].result.startloc
+            })
+        });
     }
     static statement(result, cst) {
         if (cst === undefined) {
@@ -352,13 +386,15 @@ class AST {
     }
     static macrodef(result, cst) {
         let fcst = flat(cst);
-        let name = named(fcst, "macro").result.one("member") || named(fcst, "macro").result.one("string").match(/.(.*)./)[1];
-        let as = named(fcst, "as").result.one("insert");
-        let rule = named(fcst, "as").result.tokens.slice(1).map((t) => t.result.value);
-        let body = flat(named(fcst, "as").cst);
-        let macro = emit(martha_emit_1.MacroDef, { name, as, rule, body });
-        console.log(macro.body);
+        let name = named(fcst, "name").result.one("member") || named(fcst, "name").result.one("string").match(/.(.*)./)[1];
+        let rules = fcst.filter(isa(martha_emit_1.MacroRuleDef));
+        let macro = emit(martha_emit_1.MacroDef, { name, rules });
+        console.log(macro);
         return macro;
+    }
+    static macrorule(result, cst) {
+        let fcst = flat(cst);
+        return emit(martha_emit_1.MacroRuleDef, { rule: [fcst[0]], body: fcst.slice(1) });
     }
     static importdef(result, cst) {
         return emit(martha_emit_1.ImportDef, { name: flat(cst).find(x => isa(martha_emit_1.Reference)(x)).name });
@@ -368,6 +404,29 @@ class AST {
             console.log("### TRAPPED MACRO", result, cst);
             return 1;
         };
+    }
+    static attribute(result, cst) {
+        return emit(martha_emit_1.Attribute, {
+            body: flat(cst)
+        });
+    }
+    static ifexp(result, cst) {
+        let fcst = flat(cst);
+        let _if = named(fcst, "if");
+        let _else = named(fcst, "else");
+        let tif = emit(martha_emit_1.IfExp, {
+            expression: emit(martha_emit_1.Statement, { statement: [flat(_if.cst)[0]] }),
+            body: flat(_if.cst).slice(1).map(e => emit(martha_emit_1.Statement, { statement: [e] }))
+        });
+        let _elsifs = namedmany(fcst, "elseif")
+            .map(c => AST.ifexp(result, c.cst))
+            .reduce((pre, cur) => {
+            pre.altbody = [emit(martha_emit_1.Statement, { statement: [cur] })];
+            return cur;
+        }, tif);
+        if (_else)
+            _elsifs.altbody = [emit(martha_emit_1.Statement, { statement: flat(_else.cst) })];
+        return tif;
     }
 }
 exports.AST = AST;

@@ -7,7 +7,7 @@ class Martha {
         this.program = new martha_grammar_1.ParserContext();
     }
     parse(source) {
-        return this.program.parse(source);
+        return this.program.parse(source.source, source.identity);
     }
     load(source) {
         let programdef = source instanceof martha_program_1.ProgramDef ? source : this.parse(source);
@@ -36,6 +36,7 @@ class Martha {
         types.forEach(type => this.visitType(type, errors));
     }
     visitType(type, errors) {
+        console.log(type);
     }
 }
 exports.Martha = Martha;

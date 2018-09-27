@@ -5,7 +5,7 @@ const martha_1 = require("../martha");
 describe("Martha!", () => {
     it('compiles a macro program', () => {
         let martha = new martha_1.Martha();
-        let program0 = martha.parse(`
+        let program0 = martha.parse({ source: `
 import core
 
 macro: foringenerator
@@ -15,10 +15,12 @@ as $atom (for $atom.reference in $atom.range):
         next = $atom.range.next
         current = $statement
     })
-`);
-        console.log(program0.macros[0].body);
+`,
+            identity: ""
+        });
+        console.log(program0.macros[0].rules);
         martha.load(program0);
-        let program1 = martha.parse(`
+        let program1 = martha.parse({ source: `
 type:
 	Party
 is:
@@ -45,7 +47,8 @@ atomic void record(Array[]:items{.len > 0}, int:f{> 0}, bool:flag, ref Vector<st
 atomic int{> 0} send(Address:to, int:amount{> 0})
     do(bad(stuff[0].with("stuff".length)))
 
-`);
+`,
+            identity: "" });
         console.log(program1.types[1]);
         martha.load(program1);
     });

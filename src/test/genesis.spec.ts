@@ -10,10 +10,17 @@ let martha = new Martha()
 
 function parse(file:string):ProgramDef {
     let src = fs.readFileSync(file, "utf8")
-    return martha.parse(src)
+    let parsed =  martha.parse({source:src, identity:file})
+    fs.writeFileSync(file + ".json", JSON.stringify(parsed,null,2))
+    return parsed
 }
 
 describe("genesis", () => {
+    let f = parse(__dirname + "../../genesis/Macros.ma")
+    console.log(f.macros)
+    console.log(f.types[0].members)
+    console.log(f.types[0].basetype)
+    
     let iballot = parse(__dirname + "../../genesis/IBallot.ma")
     let iparty = parse(__dirname + "../../genesis/IParty.ma")
     let itoken = parse(__dirname + "../../genesis/IToken.ma")
@@ -23,13 +30,20 @@ describe("genesis", () => {
         
     it("should be a program", () => {
         expect(iballot).to.not.be.null
+        //fs.writeFileSync(__dirname + "../../genesis/_IBallot.json", JSON.stringify(iballot, null, 2))
+        //console.log(JSON.stringify(iballot.types[0].methods[6], null,2))
+        //martha.load(iballot)
+        //return
         expect(iparty).to.not.be.null
         expect(itoken).to.not.be.null
         expect(itxhook).to.not.be.null
         expect(chair).to.not.be.null
         expect(stake).to.not.be.null
-        console.log(JSON.stringify(stake.types[0].methods[7], null, 2))
-        console.log(stake.types[0])
+
+        martha.load(iballot)
+
+        //console.log(JSON.stringify(stake.types[0].members[1], null, 2))
+        //console.log(stake.types[0].methods[11])
         //fs.writeFileSync(__dirname + "../../genesis/_IBallot.json", JSON.stringify(program, null, 2))
     })
 

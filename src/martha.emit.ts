@@ -4,6 +4,21 @@ function serializable<T extends {new(...args:any[]):{}}>(ctor:T) {
     }
 }
 
+export class Token {
+    value!: string
+    index!: number
+}
+
+export class Op {
+
+}
+
+@serializable
+export class Apply extends Op {
+    apply!: Op
+    to!: Op
+}
+
 @serializable
 export class MethodAccess {
     ispublic: boolean = false
@@ -13,20 +28,20 @@ export class MethodAccess {
 }
 
 @serializable
-export class Reference {
-    name: string = ""
+export class Reference extends Op {
+    name!: Token
 }
 
 @serializable
-export class Literal {
-    type: string = ""
-    value: string = ""
+export class Literal extends Op {
+    type!: string
+    value!: Token
 }
 
 @serializable
-export class Binary {
-    left!: any
-    right!: any
+export class Binary extends Op {
+    left!: Op
+    right!: Op
 }
 
 @serializable
@@ -104,7 +119,7 @@ export class ExcBin extends Binary {}
 
 
 @serializable
-export class UnaryPrefix {
+export class UnaryPrefix extends Op {
     value!: any
 }
 
@@ -142,7 +157,7 @@ export class Delete extends UnaryPrefix {}
 export class Return extends UnaryPrefix {}
 
 @serializable
-export class UnaryPostfix {
+export class UnaryPostfix extends Op {
     value!: any
 }
 
@@ -164,47 +179,44 @@ export class Emit {
 
 @serializable
 export class TypeRef {
-    nameref?: string[]
-    arrayof?: TypeRef
+    nameref?: Reference[]
+    types?: TypeRef[]
+    indexer?: TypeRef[]
 }
 
+/*
 @serializable
 export class IndexDef {
     type?: string | IndexDef
 }
+*/
 
 @serializable
 export class ReturnDef {
-    type!: any
-    spec!: any
+    type!: TypeRef
+    spec!: Statement[]
 }
 
 @serializable
 export class ArgumentDef {
-    name!: any
-    type!: string | string[]
-    spec!: any
+    name!: Token
+    type!: TypeRef[]
+    spec!: Statement[]
 }
 
 @serializable
 export class Statement {
-    statement!: any
+    statement!: Op[]
 }
 
 @serializable
 export class MethodDef {
-    name!: any
+    name!: Token
     attributes?: Attribute[]
-    access!: MethodAccess | undefined
-    abstract?: boolean
-    export?: boolean
-    extern?: boolean
-    async!: boolean
-    atomic!: boolean
-    critical!: boolean
+    accessors!: Token[]
     arguments!: ArgumentDef[]
     body!: Statement[]
-    return!: ReturnDef
+    return?: ReturnDef
 }
 
 @serializable
@@ -214,23 +226,35 @@ export class List {
 
 @serializable
 export class MacroDef {
-    name!: string
-    as!: any
-    rule?: any
-    body?: any
+    name!: Token
+    rules?: MacroRuleDef[]
+}
+
+@serializable
+export class MacroRuleDef {
+    rule!: Statement[]
+    body!: Statement[]
 }
 
 @serializable
 export class ImportDef {
-    name!: string
+    name!: Token
+}
+
+@serializable
+export class MemberDef {
+    type!: TypeRef
+    name!: Token
+    getter?: Statement[]
+    setter?: Statement[]
 }
 
 @serializable
 export class TypeDef {
-    name!: string
-    basetype?: string
-    members?: { type:string, name:string }[]
-    methods?: any[]
+    name!: Token
+    basetype?: TypeRef
+    members?: MemberDef[]
+    methods?: MethodDef[]
 }
 
 @serializable
@@ -238,10 +262,10 @@ export class Lambda extends MethodDef {
 }
 
 @serializable
-export class IfExp {
+export class IfExp extends Op {
     expression!: Statement
     body!: Statement[]
-    altbody?: any
+    altbody?: Statement[]
 }
 
 @serializable
@@ -249,3 +273,15 @@ export class Attribute {
     targets?: any[]
     body!: Statement[]
 }
+
+@serializable
+export class Bracket extends Op {
+    statements!: Statement[]
+ }
+
+@serializable
+export class BracketParen extends Bracket { }
+@serializable
+export class BracketCurly extends Bracket { }
+@serializable
+export class BracketArray extends Bracket { }

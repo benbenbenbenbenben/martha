@@ -3,14 +3,15 @@ import { ProgramDef } from "./martha.program";
 import { TypeDef, MacroDef } from "./martha.emit";
 
 export class Martha {
+
     private program: ParserContext
     constructor() {
         this.program = new ParserContext()
     }
-    public parse(source:string): ProgramDef {
-        return this.program.parse(source)
+    public parse(source:{source:string, identity:string}): ProgramDef {
+        return this.program.parse(source.source, source.identity)
     }
-    public load(source:string | ProgramDef): void {
+    public load(source:{source:string, identity:string} | ProgramDef): void {
         let programdef = source instanceof ProgramDef ? source : this.parse(source)
         let errors:any[] = []
         this.visit(programdef, errors)
@@ -39,6 +40,6 @@ export class Martha {
         types.forEach(type => this.visitType(type, errors))
     }
     private visitType(type:TypeDef, errors:any[]):void {
-
+        console.log(type)
     }
 }

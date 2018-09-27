@@ -1,0 +1,266 @@
+{
+  "identity": "C:\\Users\\ben\\Source\\Repos\\martha\\src\\test../../genesis/Macros.ma",
+  "imports": [],
+  "macros": [],
+  "types": [
+    {
+      "__TYPE__": "TypeDef",
+      "name": {
+        "value": "ternaryif",
+        "index": 5
+      },
+      "basetype": {
+        "__TYPE__": "TypeRef",
+        "nameref": [
+          {
+            "__TYPE__": "Reference",
+            "name": {
+              "value": "macro",
+              "index": 18
+            }
+          }
+        ],
+        "types": [
+          {
+            "__TYPE__": "TypeRef",
+            "nameref": [
+              {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "statement",
+                  "index": 24
+                }
+              }
+            ],
+            "types": [],
+            "indexer": []
+          }
+        ],
+        "indexer": []
+      },
+      "members": [],
+      "methods": [
+        {
+          "__TYPE__": "MethodDef",
+          "name": {
+            "value": "pattern",
+            "index": 47
+          },
+          "attributes": [],
+          "accessors": [],
+          "arguments": [
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "expression",
+                "index": 65
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "passvalue",
+                        "index": 55
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": []
+            },
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "_",
+                "index": 84
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "string",
+                        "index": 77
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": [
+                {
+                  "__TYPE__": "Statement",
+                  "statement": [
+                    {
+                      "__TYPE__": "Literal",
+                      "type": "string",
+                      "value": {
+                        "value": "\"if\"",
+                        "index": 86
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "expression",
+                "index": 98
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "test",
+                        "index": 93
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": []
+            },
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "_",
+                "index": 117
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "string",
+                        "index": 110
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": [
+                {
+                  "__TYPE__": "Statement",
+                  "statement": [
+                    {
+                      "__TYPE__": "Literal",
+                      "type": "string",
+                      "value": {
+                        "value": "\"else\"",
+                        "index": 119
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "__TYPE__": "ArgumentDef",
+              "name": {
+                "value": "expression",
+                "index": 138
+              },
+              "type": [
+                {
+                  "__TYPE__": "TypeRef",
+                  "nameref": [
+                    {
+                      "__TYPE__": "Reference",
+                      "name": {
+                        "value": "failvalue",
+                        "index": 128
+                      }
+                    }
+                  ],
+                  "types": [],
+                  "indexer": []
+                }
+              ],
+              "spec": []
+            }
+          ],
+          "body": [
+            {
+              "__TYPE__": "Statement",
+              "statement": [
+                {
+                  "__TYPE__": "IfExp",
+                  "expression": {
+                    "__TYPE__": "Statement",
+                    "statement": [
+                      {
+                        "__TYPE__": "Reference",
+                        "name": {
+                          "value": "test",
+                          "index": 182
+                        }
+                      }
+                    ]
+                  },
+                  "body": [
+                    {
+                      "__TYPE__": "Statement",
+                      "statement": [
+                        {
+                          "__TYPE__": "Reference",
+                          "name": {
+                            "value": "passvalue",
+                            "index": 205
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "else",
+                    "index": 228
+                  }
+                }
+              ]
+            }
+          ],
+          "return": {
+            "__TYPE__": "ReturnDef",
+            "type": {
+              "__TYPE__": "TypeRef",
+              "nameref": [
+                {
+                  "__TYPE__": "Reference",
+                  "name": {
+                    "value": "void",
+                    "index": 41
+                  }
+                }
+              ],
+              "types": [],
+              "indexer": []
+            },
+            "spec": []
+          }
+        }
+      ]
+    }
+  ]
+}

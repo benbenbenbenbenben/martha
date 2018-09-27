@@ -8,11 +8,11 @@ import * as path from "path"
 describe("kallis.Result", () => {
     let masource = fs.readFileSync(__dirname + "../../kallis/kallis.Result.ma", "utf8")
     let martha = new Martha()
-    let program = martha.parse(masource)
+    let program = martha.parse({source:masource, identity:""})
     
     it("should be a program", () => {
         console.log(program.types[0])
-        console.dir(program.types![0].methods![2].body[0].statement[0].apply.bracketcurly[4].right.left.left.right.to.apply.bracketparen[0].body)
+        console.dir(program.types![0].methods![2].body[0].statement[0])
         expect(program).to.not.be.null
 
         fs.writeFileSync(__dirname + "../../kallis/_kallis.Result.im", JSON.stringify(program, null, 2))

@@ -17,26 +17,83 @@ describe("types", () => {
     // type name
     describe("basic types", () => {
         it("should parse type name", () => {
-            chai_1.expect(tibu_1.Tibu.parse(`Foo`)(Def.typedef_name)).to.deep.eq([{ typename: ["Foo"] }]);
+            chai_1.expect(tibu_1.Tibu.parse(`Foo`)(Def.typedef_name)).to.deep.eq([{
+                    typename: [
+                        { value: "Foo", index: 0 }
+                    ]
+                }]);
         });
         it("should parse a base type name", () => {
-            chai_1.expect(tibu_1.Tibu.parse(`Bar`)(Def.typedef_basetype)).to.deep.eq([{ basetype: ["Bar"] }]);
+            chai_1.expect(tibu_1.Tibu.parse(`Bar`)(Def.typedef_basetype)[0].cst).to.deep.eq([[{
+                        __TYPE__: 'TypeRef',
+                        nameref: [{ __TYPE__: 'Reference', name: { value: 'Bar', index: 0 } }],
+                        indexer: []
+                    }]]);
         });
         it("should parse a type member", () => {
-            chai_1.expect(tibu_1.Tibu.parse(`Type: Member`)(Def.typedef_member)).to.deep.eq([{ members: [{ type: "Type", name: "Member" }] }]);
+            chai_1.expect(tibu_1.Tibu.parse(`Type: Member`)(Def.typedef_member)).to.deep.eq([[{
+                        __TYPE__: 'MemberDef',
+                        type: {
+                            __TYPE__: 'TypeRef',
+                            nameref: [{ __TYPE__: 'Reference', name: { value: 'Type', index: 0 } }],
+                            indexer: []
+                        },
+                        name: { value: 'Member', index: 6 },
+                        getter: [],
+                        setter: []
+                    }]]);
         });
         it("should parse a type with a base type", () => {
-            chai_1.expect(tibu_1.Tibu.parse(`type: Foo is: Bar`)(Def.typedef)).to.deep.eq([[martha_emit_1.Emit.Emit(martha_emit_1.TypeDef, { name: "Foo", basetype: "Bar", methods: [] })]]);
+            chai_1.expect(tibu_1.Tibu.parse(`type Foo is Bar:`)(Def.typedef)).to.deep.eq([[
+                    martha_emit_1.Emit.Emit(martha_emit_1.TypeDef, {
+                        name: { value: "Foo", index: 5 },
+                        basetype: martha_emit_1.Emit.Emit(martha_emit_1.TypeRef, {
+                            nameref: [
+                                martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "Bar", index: 12 } })
+                            ],
+                            indexer: []
+                        }),
+                        members: [],
+                        methods: []
+                    })
+                ]]);
         });
         it("should parse a basic type", () => {
-            chai_1.expect(tibu_1.Tibu.parse(`type: Foo`)(Def.typedef)).to.deep.eq([[martha_emit_1.Emit.Emit(martha_emit_1.TypeDef, { name: "Foo", methods: [] })]]);
+            chai_1.expect(tibu_1.Tibu.parse(`type Foo:`)(Def.typedef)).to.deep.eq([[
+                    martha_emit_1.Emit.Emit(martha_emit_1.TypeDef, {
+                        name: { value: "Foo", index: 5 },
+                        basetype: undefined,
+                        members: [],
+                        methods: []
+                    })
+                ]]);
         });
         it("should parse a basic type with a member variable", () => {
-            chai_1.expect(tibu_1.Tibu.parse(`type: Foo\nis: Bar with:\n    Party: this`)(Def.typedef))
-                .to.deep.eq([[{ name: "Foo", basetype: "Bar", methods: [], members: [{ type: "Party", name: "this" }] }]]);
+            chai_1.expect(tibu_1.Tibu.parse(`type Foo is Bar:\n    Party: this`)(Def.typedef))
+                .to.deep.eq([[
+                    martha_emit_1.Emit.Emit(martha_emit_1.TypeDef, {
+                        name: { value: "Foo", index: 5 },
+                        basetype: martha_emit_1.Emit.Emit(martha_emit_1.TypeRef, {
+                            nameref: [martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "Bar", index: 12 } })],
+                            indexer: []
+                        }),
+                        members: [
+                            martha_emit_1.Emit.Emit(martha_emit_1.MemberDef, {
+                                type: martha_emit_1.Emit.Emit(martha_emit_1.TypeRef, {
+                                    nameref: [martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "Party", index: 21 } })],
+                                    indexer: []
+                                }),
+                                name: { value: "this", index: 28 },
+                                getter: [],
+                                setter: []
+                            })
+                        ],
+                        methods: []
+                    })
+                ]]);
         });
         it("should parse a 1+n type with member variables", () => {
-            chai_1.expect(tibu_1.Tibu.parse(`type: Foo, Bar is: Base with:\n    Addr: addr0, addr1`)(Def.typedefs)).to.deep.eq([[
+            chai_1.expect(tibu_1.Tibu.parse(`type Foo, Bar is Base:\n    Addr: addr0, addr1`)(Def.typedefs)).to.deep.eq([[
                     {
                         name: "Foo", basetype: "Base", methods: [], members: [{ type: "Addr", name: "addr0" }, { type: "Addr", name: "addr1" }]
                     },
@@ -91,8 +148,18 @@ describe("Def", () => {
                 chai_1.expect(flat(c)).to.deep.eq([
                     martha_emit_1.Emit.Emit(martha_emit_1.Statement, { statement: [
                             martha_emit_1.Emit.Emit(martha_emit_1.Gt, {
-                                left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "this.x" }),
-                                right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "y" }),
+                                left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, {
+                                    name: martha_emit_1.Emit.Emit(martha_emit_1.Token, {
+                                        value: "this.x",
+                                        index: 1
+                                    })
+                                }),
+                                right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, {
+                                    name: martha_emit_1.Emit.Emit(martha_emit_1.Token, {
+                                        value: "y",
+                                        index: 10
+                                    })
+                                }),
                             })
                         ]
                     })
@@ -108,8 +175,8 @@ describe("Def", () => {
                 chai_1.expect(flat(c)).to.deep.eq([
                     { statement: [
                             martha_emit_1.Emit.Emit(martha_emit_1.Gt, {
-                                left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "this.x" }),
-                                right: martha_emit_1.Emit.Emit(martha_emit_1.Literal, { type: "integer", value: "10" }),
+                                left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "this.x", index: 0 } }),
+                                right: martha_emit_1.Emit.Emit(martha_emit_1.Literal, { type: "integer", value: { value: "10", index: 10 } }),
                             })
                         ]
                     }
@@ -123,8 +190,7 @@ describe("Def", () => {
             // output
             let output = (r, c) => {
                 chai_1.expect(flat(c)).to.deep.eq([
-                    { statement: [martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "func" })]
-                    }
+                    martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "func", index: 1 } })
                 ]);
                 chai_1.expect(r.tokens.length).to.eq(0);
             };
@@ -157,12 +223,13 @@ describe("Def", () => {
             let output = (r, c) => {
                 chai_1.expect(flat(c)).to.deep.eq([
                     {
-                        type: "Type",
-                        name: "name",
+                        __TYPE__: "ArgumentDef",
+                        type: [martha_emit_1.Emit.Emit(martha_emit_1.TypeRef, {})],
+                        name: { name: { value: "name", index: 5 } },
                         spec: [
                             martha_emit_1.Emit.Emit(martha_emit_1.Gt, {
-                                left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "this.x" }),
-                                right: martha_emit_1.Emit.Emit(martha_emit_1.Literal, { type: "integer", value: "10" })
+                                left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "this.x", index: 10 } }),
+                                right: martha_emit_1.Emit.Emit(martha_emit_1.Literal, { type: "integer", value: { value: "10", index: 15 } })
                             })
                         ]
                     }
@@ -177,8 +244,11 @@ describe("Def", () => {
         let input = 'void';
         // output
         let output = (r, c) => {
-            chai_1.expect(flat(c)).to.deep.eq([
-                martha_emit_1.Emit.Emit(martha_emit_1.ReturnDef, { type: "void", spec: [] })
+            chai_1.expect(flat(c)).to.deep.eq([{ __TYPE__: 'ReturnDef',
+                    type: { __TYPE__: 'TypeRef',
+                        nameref: [{ __TYPE__: 'Reference', name: { value: 'void', index: 0 } }],
+                        indexer: [] },
+                    spec: [] }
             ]);
             chai_1.expect(r.tokens.length).to.eq(0);
         };
@@ -191,13 +261,42 @@ describe("Def", () => {
         // output
         let output = (r, c) => {
             chai_1.expect(flat(c)).to.deep.eq([
-                martha_emit_1.Emit.Emit(martha_emit_1.ReturnDef, {
-                    type: "void",
-                    spec: [martha_emit_1.Emit.Emit(martha_emit_1.Gt, {
-                            left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "this" }),
-                            right: martha_emit_1.Emit.Emit(martha_emit_1.Literal, { type: "integer", value: "10" })
-                        })]
-                })
+                {
+                    "__TYPE__": "ReturnDef",
+                    "type": {
+                        "__TYPE__": "TypeRef",
+                        "nameref": [
+                            {
+                                "__TYPE__": "Reference",
+                                "name": {
+                                    "value": "void",
+                                    "index": 0
+                                }
+                            }
+                        ],
+                        "indexer": []
+                    },
+                    "spec": [
+                        {
+                            "__TYPE__": "Gt",
+                            "left": {
+                                "__TYPE__": "Reference",
+                                "name": {
+                                    "value": "this",
+                                    "index": 5
+                                }
+                            },
+                            "right": {
+                                "__TYPE__": "Literal",
+                                "type": "integer",
+                                "value": {
+                                    "value": "10",
+                                    "index": 7
+                                }
+                            }
+                        }
+                    ]
+                }
             ]);
             chai_1.expect(r.tokens.length).to.eq(0);
             proc = true;
@@ -218,8 +317,8 @@ describe("Def", () => {
                             { type: "U", name: "y", spec: [] },
                             { type: "V", name: "z", spec: [
                                     martha_emit_1.Emit.Emit(martha_emit_1.Gt, {
-                                        left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "this" }),
-                                        right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "x" })
+                                        left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "this", index: 0 } }),
+                                        right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "x", index: 3 } })
                                     })
                                 ] },
                         ]
@@ -236,16 +335,16 @@ describe("Def", () => {
             let proc = false;
             // output
             let output = (r, c) => {
-                chai_1.expect(flat(c)).to.deep.eq([{
-                        name: "constructor",
-                        access: undefined,
-                        async: false,
-                        atomic: false,
-                        critical: false,
+                chai_1.expect(flat(c)).to.deep.eq([
+                    martha_emit_1.Emit.Emit(martha_emit_1.MethodDef, {
+                        name: { value: "constructor", index: 0 },
+                        attributes: [],
+                        accessors: [],
                         arguments: [],
                         body: [],
                         return: undefined
-                    }]);
+                    })
+                ]);
                 chai_1.expect(r.tokens.length).to.eq(0);
                 proc = true;
             };
@@ -258,22 +357,27 @@ describe("Def", () => {
             let input = 'constructor(int:x):';
             // output
             let output = (r, c) => {
-                chai_1.expect(flat(c)).to.deep.eq([{
-                        name: "constructor",
-                        access: undefined,
-                        async: false,
-                        atomic: false,
-                        critical: false,
+                chai_1.expect(flat(c)).to.deep.eq([
+                    martha_emit_1.Emit.Emit(martha_emit_1.MethodDef, {
+                        name: { value: "constructor", index: 0 },
+                        attributes: [],
+                        accessors: [],
                         arguments: [
                             martha_emit_1.Emit.Emit(martha_emit_1.ArgumentDef, {
-                                name: "x",
-                                type: "int",
+                                name: { value: 'x', index: 16 },
+                                type: [
+                                    martha_emit_1.Emit.Emit(martha_emit_1.TypeRef, {
+                                        nameref: [martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "int", index: 12 } })],
+                                        indexer: []
+                                    })
+                                ],
                                 spec: []
                             })
                         ],
                         body: [],
                         return: undefined
-                    }]);
+                    })
+                ]);
                 chai_1.expect(r.tokens.length).to.eq(0);
                 proc = true;
             };
@@ -283,28 +387,74 @@ describe("Def", () => {
         it('accepts void func(Y:x, U:u, P:j{.len < u}):', () => {
             // input
             let proc = false;
-            let input = 'public void foo(Y:x, U:u, P:j{.len < i}):';
+            let input = 'public void: foo(Y:x, U:u, P:j{.len < i}): pass';
             // output
             let output = (r, c) => {
-                chai_1.expect(flat(c)).to.deep.eq([{
-                        name: "foo",
-                        access: martha_emit_1.Emit.Emit(martha_emit_1.MethodAccess, { ispublic: true }),
-                        async: false,
-                        atomic: false,
-                        critical: false,
+                console.log(JSON.stringify(c, null, 2));
+                chai_1.expect(flat(c)).to.deep.eq([
+                    martha_emit_1.Emit.Emit(martha_emit_1.MethodDef, {
+                        name: { value: "foo", index: 13 },
+                        attributes: [],
+                        accessors: [{ value: "public", index: 0 }],
                         arguments: [
-                            { type: "Y", name: "x", spec: [] },
-                            { type: "U", name: "u", spec: [] },
-                            { type: "P", name: "j", spec: [
-                                    martha_emit_1.Emit.Emit(martha_emit_1.Lt, {
-                                        left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "this.len" }),
-                                        right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "i" }),
+                            martha_emit_1.Emit.Emit(martha_emit_1.ArgumentDef, {
+                                name: { value: 'x', index: 19 },
+                                type: [
+                                    martha_emit_1.Emit.Emit(martha_emit_1.TypeRef, {
+                                        nameref: [martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "Y", index: 17 } })],
+                                        indexer: []
                                     })
-                                ] },
+                                ],
+                                spec: []
+                            }),
+                            martha_emit_1.Emit.Emit(martha_emit_1.ArgumentDef, {
+                                name: { value: 'u', index: 24 },
+                                type: [
+                                    martha_emit_1.Emit.Emit(martha_emit_1.TypeRef, {
+                                        nameref: [martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "U", index: 22 } })],
+                                        indexer: []
+                                    })
+                                ],
+                                spec: []
+                            }),
+                            martha_emit_1.Emit.Emit(martha_emit_1.ArgumentDef, {
+                                name: { value: 'j', index: 29 },
+                                type: [
+                                    martha_emit_1.Emit.Emit(martha_emit_1.TypeRef, {
+                                        nameref: [martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "P", index: 27 } })],
+                                        indexer: []
+                                    })
+                                ],
+                                spec: [
+                                    martha_emit_1.Emit.Emit(martha_emit_1.Statement, {
+                                        statement: [
+                                            martha_emit_1.Emit.Emit(martha_emit_1.Lt, {
+                                                left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "this.len", index: 31 } }),
+                                                right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "i", index: 38 } })
+                                            })
+                                        ]
+                                    })
+                                ]
+                            })
                         ],
-                        body: [],
-                        return: martha_emit_1.Emit.Emit(martha_emit_1.ReturnDef, { type: "void", spec: [] })
-                    }]);
+                        body: [
+                            martha_emit_1.Emit.Emit(martha_emit_1.Statement, {
+                                statement: [martha_emit_1.Emit.Emit(martha_emit_1.Reference, {
+                                        name: { value: "pass", index: 43 }
+                                    })]
+                            })
+                        ],
+                        return: martha_emit_1.Emit.Emit(martha_emit_1.ReturnDef, {
+                            type: martha_emit_1.Emit.Emit(martha_emit_1.TypeRef, {
+                                nameref: [
+                                    martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "void", index: 7 } })
+                                ],
+                                indexer: []
+                            }),
+                            spec: []
+                        })
+                    })
+                ]);
                 chai_1.expect(r.tokens.length).to.eq(0);
                 proc = true;
             };
@@ -317,62 +467,7 @@ describe("Def", () => {
             let proc = false;
             // output
             let output = (r, c) => {
-                chai_1.expect(flat(c)).to.deep.eq([
-                    martha_emit_1.Emit.Emit(martha_emit_1.MethodDef, {
-                        name: "func",
-                        access: undefined,
-                        async: false,
-                        atomic: false,
-                        critical: false,
-                        arguments: [
-                            martha_emit_1.Emit.Emit(martha_emit_1.ArgumentDef, {
-                                type: "int",
-                                name: "x",
-                                spec: [
-                                    { left: { name: "this" }, right: { type: "integer", value: "0" } }
-                                ]
-                            }), martha_emit_1.Emit.Emit(martha_emit_1.ArgumentDef, {
-                                type: "int",
-                                name: "y",
-                                spec: [
-                                    { left: { name: "this" }, right: { name: "x" } }
-                                ]
-                            }),
-                        ],
-                        body: [
-                            {
-                                "statement": [{
-                                        "left": {
-                                            "left": {
-                                                "apply": {
-                                                    "name": "x"
-                                                },
-                                                "to": {
-                                                    "name": "return"
-                                                }
-                                            },
-                                            "right": {
-                                                "name": "y"
-                                            }
-                                        },
-                                        "right": {
-                                            "type": "integer",
-                                            "value": "1"
-                                        }
-                                    }]
-                            }
-                        ],
-                        return: martha_emit_1.Emit.Emit(martha_emit_1.ReturnDef, {
-                            type: "int",
-                            spec: [
-                                martha_emit_1.Emit.Emit(martha_emit_1.Gt, {
-                                    left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "this" }),
-                                    right: martha_emit_1.Emit.Emit(martha_emit_1.Literal, { type: "integer", value: "0" })
-                                })
-                            ]
-                        })
-                    })
-                ]);
+                chai_1.expect(flat(c)).to.deep.eq([]);
                 chai_1.expect(r.tokens.length).to.eq(0);
                 proc = true;
             };
@@ -383,7 +478,7 @@ describe("Def", () => {
     describe("macrodef", () => {
         it('accepts macro: return when: return $subatom use: Emit.Return($subatom)', () => {
             // input
-            let input = 'macro: return\nwhen: return $subatom\nuse: Emit.Return($subatom)';
+            let input = 'macro return:\nwhen: return $subatom\nuse: Emit.Return($subatom)';
             let proc = false;
             // output
             let output = (r, c) => {
@@ -424,6 +519,28 @@ as $atom ($statement for $atom.reference in $atom.range):
 });
 describe('Exp', () => {
     describe("exp", () => {
+        it('accepts if true:\n    pass\nelse if false:\n    pass\nelse if test:\n    pass\nelse:\n    pass', () => {
+            // input
+            let input = `if true:
+    passtrue
+else if false:
+    passfalse
+else if alt:
+    passalt
+else:
+    passelse
+`;
+            let proc = false;
+            // output
+            let output = (r, c) => {
+                console.log(JSON.stringify(c, null, 2));
+                chai_1.expect(flat(c)).to.deep.eq([{}]);
+                chai_1.expect(r.tokens.length).to.eq(1);
+                proc = true;
+            };
+            parse(input)(rule(Stmt.statement).yields(output));
+            chai_1.expect(proc).to.be.eq(true);
+        });
         it('accepts x + y * x / w - q', () => {
             // input
             let input = 'g + y * x / w - q';
@@ -434,16 +551,16 @@ describe('Exp', () => {
                     { __TYPE__: "Statement", statement: [
                             martha_emit_1.Emit.Emit(martha_emit_1.Minus, {
                                 left: martha_emit_1.Emit.Emit(martha_emit_1.Plus, {
-                                    left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "g" }),
+                                    left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "g", index: 0 } }),
                                     right: martha_emit_1.Emit.Emit(martha_emit_1.Div, {
                                         left: martha_emit_1.Emit.Emit(martha_emit_1.Mult, {
-                                            left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "y" }),
-                                            right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "x" }),
+                                            left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "y", index: 4 } }),
+                                            right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "x", index: 8 } }),
                                         }),
-                                        right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "w" })
+                                        right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "w", index: 12 } })
                                     })
                                 }),
-                                right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "q" })
+                                right: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "q", index: 16 } })
                             })
                         ] }
                 ]);
@@ -459,9 +576,9 @@ describe('Exp', () => {
             let proc = false;
             // output
             let output = (r, c) => {
-                chai_1.expect(flat(c)[0]).to.deep.eq({ statement: [martha_emit_1.Emit.Emit(martha_emit_1.Assignment, {
-                            left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: "a" }),
-                            right: martha_emit_1.Emit.Emit(martha_emit_1.Literal, { type: "integer", value: "10" }),
+                chai_1.expect(flat(c)[0]).to.deep.eq({ __TYPE__: "Statement", statement: [martha_emit_1.Emit.Emit(martha_emit_1.Assignment, {
+                            left: martha_emit_1.Emit.Emit(martha_emit_1.Reference, { name: { value: "a", index: 0 } }),
+                            right: martha_emit_1.Emit.Emit(martha_emit_1.Literal, { type: "integer", value: { value: "10", index: 4 } }),
                         })]
                 }).and.instanceof(martha_emit_1.Statement);
                 chai_1.expect(r.tokens.length).to.eq(0);
@@ -476,8 +593,10 @@ describe('Exp', () => {
             let proc = false;
             // output
             let output = (r, c) => {
-                chai_1.expect(flat(c)).to.deep.eq([{ statement: [{
-                                left: { name: "a" },
+                chai_1.expect(flat(c)).to.deep.eq([{
+                        __TYPE__: "Statement",
+                        statement: [{ __TYPE__: "Plus",
+                                left: { __TYPE__: "Reference", name: { value: "a", index: 0 } },
                                 right: {
                                     left: {
                                         bracketparen: [
@@ -497,7 +616,8 @@ describe('Exp', () => {
                                         ]
                                     }
                                 }
-                            }] }]);
+                            }]
+                    }]);
                 proc = true;
             };
             parse(input)(rule(Stmt.statement).yields(output));
@@ -510,7 +630,12 @@ describe('Exp', () => {
             // output
             let output = (r, c) => {
                 chai_1.expect(flat(c)).to.deep.eq([
-                    { statement: [{ apply: { name: 'a' }, to: { name: 'return' } }] }
+                    { __TYPE__: "Statement", statement: [
+                            {
+                                apply: { __TYPE__: "Reference", name: { value: 'a', index: 7 } },
+                                to: { __TYPE__: "Reference", name: { value: 'return', index: 0 } }
+                            }
+                        ] }
                 ]);
                 proc = true;
             };

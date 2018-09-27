@@ -14,6 +14,18 @@ function serializable(ctor) {
         }
     };
 }
+class Token {
+}
+exports.Token = Token;
+class Op {
+}
+exports.Op = Op;
+let Apply = class Apply extends Op {
+};
+Apply = __decorate([
+    serializable
+], Apply);
+exports.Apply = Apply;
 let MethodAccess = class MethodAccess {
     constructor() {
         this.ispublic = false;
@@ -26,26 +38,19 @@ MethodAccess = __decorate([
     serializable
 ], MethodAccess);
 exports.MethodAccess = MethodAccess;
-let Reference = class Reference {
-    constructor() {
-        this.name = "";
-    }
+let Reference = class Reference extends Op {
 };
 Reference = __decorate([
     serializable
 ], Reference);
 exports.Reference = Reference;
-let Literal = class Literal {
-    constructor() {
-        this.type = "";
-        this.value = "";
-    }
+let Literal = class Literal extends Op {
 };
 Literal = __decorate([
     serializable
 ], Literal);
 exports.Literal = Literal;
-let Binary = class Binary {
+let Binary = class Binary extends Op {
 };
 Binary = __decorate([
     serializable
@@ -249,7 +254,25 @@ Range = __decorate([
     serializable
 ], Range);
 exports.Range = Range;
-let UnaryPrefix = class UnaryPrefix {
+let ColonBin = class ColonBin extends Binary {
+};
+ColonBin = __decorate([
+    serializable
+], ColonBin);
+exports.ColonBin = ColonBin;
+let QuesBin = class QuesBin extends Binary {
+};
+QuesBin = __decorate([
+    serializable
+], QuesBin);
+exports.QuesBin = QuesBin;
+let ExcBin = class ExcBin extends Binary {
+};
+ExcBin = __decorate([
+    serializable
+], ExcBin);
+exports.ExcBin = ExcBin;
+let UnaryPrefix = class UnaryPrefix extends Op {
 };
 UnaryPrefix = __decorate([
     serializable
@@ -351,7 +374,7 @@ Return = __decorate([
     serializable
 ], Return);
 exports.Return = Return;
-let UnaryPostfix = class UnaryPostfix {
+let UnaryPostfix = class UnaryPostfix extends Op {
 };
 UnaryPostfix = __decorate([
     serializable
@@ -388,6 +411,18 @@ class Emit {
     }
 }
 exports.Emit = Emit;
+let TypeRef = class TypeRef {
+};
+TypeRef = __decorate([
+    serializable
+], TypeRef);
+exports.TypeRef = TypeRef;
+/*
+@serializable
+export class IndexDef {
+    type?: string | IndexDef
+}
+*/
 let ReturnDef = class ReturnDef {
 };
 ReturnDef = __decorate([
@@ -424,12 +459,24 @@ MacroDef = __decorate([
     serializable
 ], MacroDef);
 exports.MacroDef = MacroDef;
+let MacroRuleDef = class MacroRuleDef {
+};
+MacroRuleDef = __decorate([
+    serializable
+], MacroRuleDef);
+exports.MacroRuleDef = MacroRuleDef;
 let ImportDef = class ImportDef {
 };
 ImportDef = __decorate([
     serializable
 ], ImportDef);
 exports.ImportDef = ImportDef;
+let MemberDef = class MemberDef {
+};
+MemberDef = __decorate([
+    serializable
+], MemberDef);
+exports.MemberDef = MemberDef;
 let TypeDef = class TypeDef {
 };
 TypeDef = __decorate([
@@ -442,4 +489,40 @@ Lambda = __decorate([
     serializable
 ], Lambda);
 exports.Lambda = Lambda;
+let IfExp = class IfExp extends Op {
+};
+IfExp = __decorate([
+    serializable
+], IfExp);
+exports.IfExp = IfExp;
+let Attribute = class Attribute {
+};
+Attribute = __decorate([
+    serializable
+], Attribute);
+exports.Attribute = Attribute;
+let Bracket = class Bracket extends Op {
+};
+Bracket = __decorate([
+    serializable
+], Bracket);
+exports.Bracket = Bracket;
+let BracketParen = class BracketParen extends Bracket {
+};
+BracketParen = __decorate([
+    serializable
+], BracketParen);
+exports.BracketParen = BracketParen;
+let BracketCurly = class BracketCurly extends Bracket {
+};
+BracketCurly = __decorate([
+    serializable
+], BracketCurly);
+exports.BracketCurly = BracketCurly;
+let BracketArray = class BracketArray extends Bracket {
+};
+BracketArray = __decorate([
+    serializable
+], BracketArray);
+exports.BracketArray = BracketArray;
 //# sourceMappingURL=martha.emit.js.map

@@ -2,7 +2,7 @@
 import { Tibu, Result, ResultTokens, Input, IRule, IToken, Pattern, IRuleAction } from "tibu";
 const { parse, token, rule, all, many, optional, either } = Tibu;
 
-import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List, MacroDef, ImportDef, TypeDef, Lambda, Range, IndexDef, TypeRef, ColonBin, QuesBin, ExcBin, IfExp, Attribute } from "./martha.emit";
+import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List, MacroDef, ImportDef, TypeDef, Lambda, Range, TypeRef, ColonBin, QuesBin, ExcBin, IfExp, Attribute, MacroRuleDef, MemberDef, Token, Apply, BracketParen, BracketArray, BracketCurly } from "./martha.emit";
 import { Op, Mcro } from "./martha.grammar";
 const emit = Emit.Emit
 
@@ -15,9 +15,13 @@ const isa = (T:any) => (x:any): boolean => {
     return x instanceof T
 }
 
-const named = (cst:any[], name:string) => {
+const namedmany = (cst:any[], name:string) => {
     const fcst = flat(cst)
-    return fcst.find(x => x.named === name)
+    return fcst.filter(x => x.named === name)
+}
+
+const named = (cst:any[], name:string) => {
+    return namedmany(cst, name).length > 0 ? namedmany(cst, name)[0] : undefined
 }
 
 class AST {
@@ -47,17 +51,23 @@ class AST {
                 } // TODO: else error case
             } else {
                 modcst.unshift({ op: result.tokens[0].name })
-                modcst.unshift(emit<Reference>(Reference,{name:"this"}))
+                modcst.unshift(emit<Reference>(Reference,{
+                    name:{
+                        value:"this", 
+                        index:result.tokens[0].result.startloc 
+                    }
+                }))
             }
         }
         return modcst
     }
 
-    static argumentdef(result:ResultTokens, cst:any):any {
+    static argumentdef(result:ResultTokens, cst:any):any {        
+        let argspec = named(flat(cst), "argspec")
         return emit(ArgumentDef, {
-                type: result.get("typename"),
                 name: result.one("varname"),
-                spec: cst ? flat(flat(cst).filter(isa(Statement)).map(x => x.statement)) : [],
+                type: cst ? flat(cst).filter(isa(TypeRef)) : [],
+                spec: argspec ? flat(argspec.cst) : []
             })
     }
 
@@ -69,50 +79,42 @@ class AST {
     }
 
     static returndef(result:ResultTokens, cst:any):ReturnDef {
+        let argspec = named(flat(cst), "argspec")
         return emit(ReturnDef, { 
-            type: result.one("typename"),
-            spec: cst ? flat(flat(cst).filter(isa(Statement)).map(x => x.statement)) : [] 
+            type: flat(cst)[0],
+            spec: argspec ? flat(argspec.cst) : [] 
         })
     }
 
     static methoddef(result:ResultTokens, cst:any):MethodDef {
-        console.log(21)
+        let fcst = flat(cst)
+        let accessors = named(fcst, "accessors")
+        let returndef = cst && flat(cst).find((x:any) => x instanceof ReturnDef)
         return emit(MethodDef, {
-            name: result.one("ctor") || result.one("name"),
+            // TODO: new Token s/c because unknown definitily typed behaviour around ||
+            name: result.one("ctor") || result.one("name") || new Token(),
             attributes: cst && flat(cst).filter(isa(Attribute)),
-            access: cst && flat(cst).find(x => x instanceof MethodAccess),
-            abstract: result.get("abstract") !== null,
-            export: result.get("export") !== null,
-            extern: result.get("extern") !== null,
-            async: result.get("async") !== null,
-            atomic: result.get("atomic") !== null,
-            critical: result.get("critical") !== null,
+            accessors: accessors.result.tokens.map((t:any) => emit(Token, {value:t.result.value, index:t.result.startloc})),
             arguments: cst ? flat(flat(cst).filter((x:any) => x.op == "argdefs").map((x:any) => x.parameters)) : [],
             body: cst ? flat(cst).filter((x:any) => x instanceof Statement) : [],
-            return: cst && flat(cst).find((x:any) => x instanceof ReturnDef),
+            return: returndef,
         })
     }
 
     static typedef(result:ResultTokens, cst:any):any {
-        const fcst = flat(cst)
+        let fcst = flat(cst)
+        let basetype = named(fcst, "basetype")
         let types:any[] = fcst
             .filter(x => x)
-            .filter(x => x.typename)
+            .filter(t => t.typename)
             .map((name:any) => {
-                return name.typename.map((name:string) => {
-                    let type:any = {
-                        name
-                    };
-                    flat(cst).filter(x => x).forEach(part => {
-                        if (part.basetype) {
-                            type.basetype = part.basetype[0];
-                        }
-                        if (part.members) {
-                            type.members = type.members ? [...type.members, ...part.members]
-                                                        : [...part.members];
-                        }
-                    });
-                    type.methods = fcst.filter(x => isa(MethodDef)(x))
+                return name.typename.map((name:Token) => {
+                    let type:TypeDef = {
+                        name,
+                        basetype: basetype ? flat(basetype.cst)[0] : undefined
+                    }
+                    type.members = fcst.filter(isa(MemberDef))
+                    type.methods = fcst.filter(isa(MethodDef))
                     return emit(TypeDef, type);
                 })
             }
@@ -120,44 +122,38 @@ class AST {
         return flat(types)
     }
 
-    static typedef_index(result:ResultTokens, cst:any):any {
-        console.log(result.get("typename"))
+    static typedef_index(result:ResultTokens, cst:any):TypeRef {
+        //console.log(flat(flat(namedmany(cst, "types"))[0].cst))
         let ref = emit(TypeRef, {
-            nameref: result.get("typename"),
-            arrayof: cst ? flat(cst)[0] : undefined
+            nameref: cst ? flat(namedmany(cst, "name").map(c => c.cst)) : undefined,
+            types: cst ? flat(namedmany(cst, "types").map(c => AST.typedef_index(result, c.cst))) : undefined,
+            indexer: cst ? flat(namedmany(cst, "indexer").map(c => AST.typedef_index(result, c.cst || []))) : undefined,
         })
         return ref;
         // return cst ? (result.get("typename") || []).concat([{index:flat(cst)}]) : result.get("typename")
     }
 
     static typedef_type(result:ResultTokens, cst:any):any {
-        console.log(flat(cst))
         return AST.typedef_index(result, cst)
     }
 
-    static typedef_member(result:ResultTokens, cst:any):any {
-        console.log("~", flat(cst))
-        return {
-            members: flat(cst)
-                    .filter(x => isa(Reference)(x))
-                    .map(x => {
-                        return {
-                            type: flat(cst)[0],
-                            name: x.name
-                        };
+    static typedef_member(result:ResultTokens, cst:any):MemberDef[] {
+        // TODO: memberdef type
+        let fcst = flat(cst).filter(x => x)
+        return  fcst
+                .filter(isa(Reference))
+                .map(x => emit(MemberDef, {
+                        type: fcst[0],
+                        name: x.name,
+                        getter: named(fcst, "getter") ? named(fcst, "getter").cst : [],
+                        setter: named(fcst, "setter") ? named(fcst, "setter").cst : [],
                     })
-        };
+                )
     }
 
     static typedef_name(result:ResultTokens, cst:any):any {
         return {
             typename: result.get("typename")
-        };
-    }
-
-    static typedef_basetype(result:ResultTokens, cst:any):any {
-        return {
-            basetype: result.get("typename")
         };
     }
 
@@ -167,13 +163,13 @@ class AST {
 
         let lambda = emit(Lambda, {
             name: spec.result.tokens[0].result.value,
-            access: undefined,
-            async: false,
-            atomic: false,
-            critical: false,
+            accessors: [],
             arguments: [],
             body: flat(body.cst),
-            return: emit(ReturnDef, { type: "computed", spec: "computed" })
+            return: emit(ReturnDef, {
+                type: emit(TypeRef, {}),
+                spec: []
+            })
         })
         
         return lambda
@@ -201,7 +197,7 @@ class AST {
     static atomliteral(result:ResultTokens, cst:any):any {
         return emit<Literal>(Literal, {
             type: result.tokens[0].name,
-            value: result.tokens[0].result.value
+            value: { value: result.tokens[0].result.value, index: result.tokens[0].result.startloc }
         })
     }
 
@@ -212,6 +208,7 @@ class AST {
         };
     }
 
+    /*
     static atomobjliteral(result:ResultTokens, cst:any):any {
         return {
             op:"literal",
@@ -220,6 +217,7 @@ class AST {
             : ["object"]
         };
     }
+    */
 
     static atommember(result:ResultTokens, cst:any):any {
         return flat(cst);
@@ -229,7 +227,7 @@ class AST {
         let f = flat(cst)
         if (f.length > 1) {
             //return { apply: f.slice(1), to: f[0] }
-            return f.reduce((a,b) => { return { apply: b, to: a } })
+            return f.reduce((a,b) =>  emit(Apply, { apply: b, to: a }))
         }
         return flat(cst);
     }
@@ -256,7 +254,10 @@ class AST {
 
     static reference(result:ResultTokens, cst:any):any {
         return emit<Reference>(Reference, {
-            name: result.get("member").join(".")
+            name: {
+                value: result.get("member")!.map(v => v.value).join("."),
+                index: result.one("member")!.index
+            }
         })
     }
 
@@ -288,13 +289,19 @@ class AST {
     }
 
     static bracketparen(result:ResultTokens, cst:any):any {
-        return { bracketparen: cst ? flat(cst) : [] }
+        return emit(BracketParen, {
+            statements: cst ? flat(cst) : []
+        })
     }
     static bracketarray(result:ResultTokens, cst:any):any {
-        return { bracketarray: cst ? flat(cst) : [] }
+        return emit(BracketArray, {
+            statements: cst ? flat(cst) : []
+        })
     }
     static bracketcurly(result:ResultTokens, cst:any):any {
-        return { bracketcurly: cst ? flat(cst) : [] }
+        return emit(BracketCurly, {
+            statements: cst ? flat(cst) : []
+        })
     }
 
     static commaexpr(result:ResultTokens, cst:any):any {
@@ -323,7 +330,12 @@ class AST {
                 let op = new Op()
                 switch(result.tokens.shift()!.name) {
                     case op.dot.__token__: return (isa(Reference)(left) && isa(Reference)(right))
-                        ? emit(Reference, { name: `${left.name}.${right.name}`}) 
+                        ? emit(Reference, {
+                            name: emit(Token, {
+                                value: `${left.name.value}.${right.name.value}`,
+                                index: left.name.index
+                            })
+                        }) 
                         : emit(Dot, { left, right })
                     case op.ques.__token__: return emit(QuesBin, { left, right })
                     case op.colon.__token__: return emit(ColonBin, { left, right })
@@ -407,7 +419,12 @@ class AST {
     }
 
     static thisref(result:ResultTokens, cst:any):any {
-        return emit(Reference, { name: "this" })
+        return emit(Reference, { 
+            name: emit(Token, {
+                value: "this", 
+                index: result.tokens[0].result.startloc
+            }) 
+        })
     }
 
     static statement(result:ResultTokens, cst:any):any {
@@ -419,14 +436,17 @@ class AST {
 
     static macrodef(result:ResultTokens, cst:any):any {
         let fcst = flat(cst)        
-        let name = named(fcst, "macro").result.one("member") || named(fcst, "macro").result.one("string").match(/.(.*)./)[1]
-        let as = named(fcst, "as").result.one("insert")
-        let rule = named(fcst, "as").result.tokens.slice(1).map((t:any) => t.result.value)
-        let body = flat(named(fcst, "as").cst)
+        let name = named(fcst, "name").result.one("member") || named(fcst, "name").result.one("string").match(/.(.*)./)[1] 
+        let rules = fcst.filter(isa(MacroRuleDef))
 
-        let macro = emit(MacroDef, { name, as, rule, body })
-        console.log(macro.body)
+        let macro = emit(MacroDef, { name, rules })
+        console.log(macro)
         return macro
+    }
+
+    static macrorule(result:ResultTokens, cst:any):any {
+        let fcst = flat(cst)
+        return emit(MacroRuleDef, { rule: [fcst[0]], body:fcst.slice(1) })
     }
 
     static importdef(result:ResultTokens, cst:any):any {
@@ -447,14 +467,22 @@ class AST {
     }
 
     static ifexp(result:ResultTokens, cst:any):IfExp {
-        let fcst = flat(cst) 
-        console.log(fcst.map(f=>flat(f.cst)))
-        
-        return emit(IfExp, {
-            expression: flat(named(fcst, "if").cst)[0],
-            body: flat(named(fcst, "if").cst).slice(1),
-            altbody: named(fcst, "else") ? flat(named(fcst, "else").cst) : undefined
+        let fcst = flat(cst)
+        let _if = named(fcst, "if")
+        let _else = named(fcst, "else")
+        let tif = emit(IfExp, {
+            expression: emit(Statement, {statement: [flat(_if.cst)[0]]}),
+            body: flat(_if.cst).slice(1).map(e => emit(Statement, {statement:[e]}))
         })
+        let _elsifs = namedmany(fcst, "elseif")
+                    .map(c => AST.ifexp(result, c.cst))
+                    .reduce((pre:IfExp, cur:IfExp) => {
+                        pre.altbody = [emit(Statement, {statement:[cur]})]
+                        return cur
+                    }, tif)
+        if (_else)
+            _elsifs.altbody = [emit(Statement, {statement:flat(_else.cst)})]
+        return tif
     }
 }
 

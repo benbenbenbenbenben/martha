@@ -1,24 +1,23 @@
-type Chair:
-    is: IToken
+type Chair is IToken:
     storage timestamp[Address]: sanctioned
     storage timestamp[Address]: chairs
     storage uint: maxChairs = 7
     timestamp[Address]: allmembers => sanctioned + chairs
-    string name():
+    string: name(): 
         "Chair"
-    string symbol():
+    string: symbol(): 
         "GOV"
-    byte decimal():
+    byte: decimal(): 
         0
-    uint totalSupply():
+    uint: totalSupply(): 
         maxChairs
-    number balanceOf(Address:address):
-        chairs[address] ? 1 : 0
-    bool transfer(witnessed Address:from, Address:to{in accounts}, number:amount{> 0}):
+    number: balanceOf(Address:address):
+        1 if chairs[address] else 0
+    bool: transfer(witnessed Address:from, Address:to{in accounts}, number:amount{> 0}):
         false
-    uint vacantSeats():
+    uint: vacantSeats():
         totalSupply() - (chairs.len + sanctioned.len)
-    bool resign(witnessed Address:address):
+    bool: resign(witnessed Address:address):
         if address in sanctioned:
             delete sanctioned[address]
             return true
@@ -26,10 +25,10 @@ type Chair:
             delete chairs[address]
             return true
         return false
-    bool add(witnessed Address:address{stake > 0 && not in allmembers}, executor Stake:caller{== stakeholders}):
+    bool: add(witnessed Address:address{stake > 0 && not in allmembers}, executor Stake:caller{== stakeholders}):
         if vacantSeats() > 0:
             chairs[address] = getTimestamp()
             return true
         return false
     @syscall("dcdc.stakeholders")
-    extern Stake stakeholders(): pass
+    extern Stake: stakeholders(): pass
