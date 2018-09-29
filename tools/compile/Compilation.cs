@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
+
 internal class Compilation
 {
     private AssemblyDefinition asm;
@@ -33,6 +36,7 @@ internal class Compilation
         // flags
         bool isarray = false;
         bool isdictionary = false;
+        List<TypeReference> dictionarykeys = null;
         //
 
         if (basetype.indexer.Length > 0) {
@@ -40,16 +44,21 @@ internal class Compilation
                 isarray = true;
             } else {
                 isdictionary = true;
+                dictionarykeys = new List<TypeReference>();
                 foreach (var keytype in basetype.indexer) {
                     var keytyperef = GetTypeReference(keytype);
-                    
+                    dictionarykeys.Add(keytyperef);
                 }
             }
         }
         var typename = basetype.nameref.Last().name.value;
         TypeReference outref = new TypeReference("default", typename, mod, mod);
-
+        
         switch(typename) {
+            // TODO: lowercase
+            //case "Address":
+            //outref = new ArrayType(mod.TypeSystem.Byte);
+            //break;
             case "string":
             outref = mod.TypeSystem.String;
             break;
@@ -74,8 +83,25 @@ internal class Compilation
         }
         return f;
         */
+        // TODO: test dict/array vs array/dict
         if (isarray) {
             outref = new ArrayType(outref);
+        }
+        if (isdictionary) {
+            
+            var tupletype = dictionarykeys.Count == 1 
+                ? dictionarykeys.First()
+                : mod
+                .ImportReference(typeof(Tuple<>))
+                .MakeGenericInstanceType(
+                    dictionarykeys.ToArray()
+            );
+            var dicttype = mod
+                .ImportReference(typeof(Dictionary<,>))
+                .MakeGenericInstanceType(
+                    tupletype, outref
+                );
+            outref = dicttype;
         }
         return outref;
     }
