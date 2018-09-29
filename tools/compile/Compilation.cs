@@ -30,11 +30,20 @@ internal class Compilation
 
     internal TypeReference GetTypeReference(TypeRef basetype)
     {
+        // flags
         bool isarray = false;
+        bool isdictionary = false;
+        //
 
         if (basetype.indexer.Length > 0) {
             if (basetype.indexer[0].nameref.Length == 0) {
                 isarray = true;
+            } else {
+                isdictionary = true;
+                foreach (var keytype in basetype.indexer) {
+                    var keytyperef = GetTypeReference(keytype);
+                    
+                }
             }
         }
         var typename = basetype.nameref.Last().name.value;
