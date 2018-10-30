@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "compile": {
+      "commandName": "Project",
+      "workingDirectory": "C:\\Users\\ben\\Source\\Repos\\martha\\tools\\compile"
+    }
+  }
+}

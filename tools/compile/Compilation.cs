@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
@@ -10,10 +9,20 @@ internal class Compilation
 {
     private AssemblyDefinition asm;
     private ModuleDefinition mod;
+    public ModuleDefinition Module { get { return mod; } }
 
     public Compilation()
     {        
         asm = Mono.Cecil.AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition("test", new System.Version(1,1)), "mod", ModuleKind.Dll);
+        
+        // TODO: review
+        CustomAttribute ca = new CustomAttribute (
+            asm.MainModule.ImportReference (typeof (System.Runtime.Versioning.TargetFrameworkAttribute).GetConstructor (new Type [] {typeof (string)})));
+        ca.ConstructorArguments.Add(new CustomAttributeArgument(asm.Modules.First().TypeSystem.String, ".NETCoreApp,Version=v2.1"));
+
+        asm.CustomAttributes.Add (ca);
+        //
+
         mod = asm.Modules.First();
         /*
         var t1 = new TypeDefinition("default", "Type1", TypeAttributes.Public);
@@ -72,7 +81,8 @@ internal class Compilation
             break;
             case "number":
             case "timestamp":
-            outref = mod.ImportReference(typeof(BigInteger));
+           // outref = mod.TypeSystem.UInt64;
+            outref = mod.ImportReference(typeof(System.Numerics.BigInteger));
             break;
         }
         /*
