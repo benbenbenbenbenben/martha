@@ -1,7 +1,7 @@
 {
   "runtimeTarget": {
     "name": ".NETCoreApp,Version=v2.0",
-    "signature": "12315006dc68bb54abc35c791e5be3ff323cbe93"
+    "signature": "478a9df1ced7979f271c7dbf2fdd8eb2c31439df"
   },
   "compilationOptions": {},
   "targets": {
@@ -11,7 +11,6 @@
           "Microsoft.NETCore.Runtime.CoreCLR": "2.0.8",
           "Mono.Cecil": "0.10.1",
           "Newtonsoft.Json": "11.0.2",
-          "System.Collections": "4.3.0",
           "System.Runtime.Numerics": "4.3.0"
         },
         "runtime": {
@@ -27,7 +26,7 @@
       "Microsoft.NETCore.Targets/1.1.0": {},
       "Mono.Cecil/0.10.1": {
         "dependencies": {
-          "System.Collections": "4.3.0",
+          "System.Collections": "4.0.11",
           "System.IO.FileSystem": "4.0.1",
           "System.IO.FileSystem.Primitives": "4.0.1",
           "System.Reflection": "4.3.0",
@@ -53,7 +52,7 @@
           "Microsoft.NETCore.Targets": "1.1.0"
         }
       },
-      "System.Collections/4.3.0": {
+      "System.Collections/4.0.11": {
         "dependencies": {
           "Microsoft.NETCore.Targets": "1.1.0",
           "System.Runtime": "4.3.0"
@@ -61,7 +60,7 @@
       },
       "System.Collections.Concurrent/4.0.12": {
         "dependencies": {
-          "System.Collections": "4.3.0",
+          "System.Collections": "4.0.11",
           "System.Diagnostics.Debug": "4.0.11",
           "System.Diagnostics.Tracing": "4.1.0",
           "System.Globalization": "4.3.0",
@@ -117,7 +116,7 @@
       },
       "System.Linq/4.1.0": {
         "dependencies": {
-          "System.Collections": "4.3.0",
+          "System.Collections": "4.0.11",
           "System.Diagnostics.Debug": "4.0.11",
           "System.Resources.ResourceManager": "4.3.0",
           "System.Runtime": "4.3.0",
@@ -182,7 +181,7 @@
       },
       "System.Security.Cryptography.Algorithms/4.2.0": {
         "dependencies": {
-          "System.Collections": "4.3.0",
+          "System.Collections": "4.0.11",
           "System.IO": "4.3.0",
           "System.Resources.ResourceManager": "4.3.0",
           "System.Runtime": "4.3.0",
@@ -234,7 +233,7 @@
       },
       "System.Security.Cryptography.Encoding/4.0.0": {
         "dependencies": {
-          "System.Collections": "4.3.0",
+          "System.Collections": "4.0.11",
           "System.Collections.Concurrent": "4.0.12",
           "System.Linq": "4.1.0",
           "System.Resources.ResourceManager": "4.3.0",
@@ -336,12 +335,12 @@
       "path": "runtime.native.system.security.cryptography/4.0.0",
       "hashPath": "runtime.native.system.security.cryptography.4.0.0.nupkg.sha512"
     },
-    "System.Collections/4.3.0": {
+    "System.Collections/4.0.11": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-yDcaGDcZniur3z2N+z72M1UZmmu04uE5RPft9+8ZhnUB8UqgxctzhwbtM0k7q3gma7XJC1bN+JslweFJqUw55w==",
-      "path": "system.collections/4.3.0",
-      "hashPath": "system.collections.4.3.0.nupkg.sha512"
+      "sha512": "sha512-it0s+oHUkt6w+CAkr20Tk/zlhbjHPbim3WDA+ELkeAUp6I2M3TUpDblnfjp0sGDW8nnFt0zxGV6C8zu8RpLXnA==",
+      "path": "system.collections/4.0.11",
+      "hashPath": "system.collections.4.0.11.nupkg.sha512"
     },
     "System.Collections.Concurrent/4.0.12": {
       "type": "package",

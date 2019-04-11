@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using Newtonsoft.Json;
 
 namespace compile
@@ -31,7 +33,17 @@ namespace compile
                 File.WriteAllText(o, serial);
                 program.Visit(compilation);
             }
-            compilation.Save("bar.dll");
+            compilation.Save(Environment.CurrentDirectory + "\\bar.dll");
+
+
+            // test load
+            var a = Assembly.LoadFrom(Environment.CurrentDirectory + "\\bar.dll");
+            var g = a.GetType("default.Chair");
+            var h = g.GetConstructor(Type.EmptyTypes);
+            var y = h.Invoke(null);
+            var fmaxChairs = g.GetField("maxChairs", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            fmaxChairs.SetValue(y, (uint)10);
+            var t = fmaxChairs.GetValue(y);
         }
     }
 }
