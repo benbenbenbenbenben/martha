@@ -18,6 +18,9 @@ public class MemberDef
             fieldType: compilation.GetTypeReference(this.type)
         );
         field.Attributes = this.type.nameref.Reverse().Skip(1).Select(r => r.name).ToFieldAttributes();
+        if (field.Attributes == FieldAttributes.CompilerControlled) {
+            field.Attributes = FieldAttributes.Private;
+        }
         if (getter.Length > 0 || setter.Length > 0) {
 
         }
