@@ -1012,7 +1012,7 @@ class ParserContext {
 
     public addMacro(macro:MacroDef):void {
         console.log("## VISIT MACRO")
-        const identity = (x:MacroDef) => x.rule!.rule.map(rule => `${x.insert.value}#${this.getSourceCode(rule)}`)
+        const identity = (x:MacroDef) => x.rule!.rule.map(rule => `${x.insert.value }#${this.getSourceCode(rule)}`)
         console.log(identity(macro))
         if (this.macroDefs.find(x => identity(x) === identity(macro))) {
             throw new Error(`Macro ${identity(macro)} is already registered.`)
