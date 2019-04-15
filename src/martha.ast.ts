@@ -436,11 +436,14 @@ class AST {
 
     static macrodef(result:ResultTokens, cst:any):any {
         let fcst = flat(cst)        
-        let name = named(fcst, "name").result.one("member") || named(fcst, "name").result.one("string").match(/.(.*)./)[1] 
-        let rules = fcst.filter(isa(MacroRuleDef))
+        let def = named(fcst, "def").cst
+        let name = named(def, "name").result.one("member") || named(def, "name").result.one("string").match(/.(.*)./)[1] 
+        let insert = named(def, "insert").result.one("member")
+        console.log(insert)
+        let rule = fcst.filter(isa(MacroRuleDef))[0]
 
-        let macro = emit(MacroDef, { name, rules })
-        console.log(macro)
+        let macro = emit(MacroDef, { name:emit(Token, name), insert:emit(Token, insert), rule })
+        console.log(macro.rule.rule[0].statement[0].apply)
         return macro
     }
 

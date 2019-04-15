@@ -1,8 +1,8 @@
-type ternaryif is macro<statement>:
-    void: pattern(passvalue:expression, string:_{"if"}, test:expression, string:_{"else"}, failvalue:expression):
-        emit:
-            if test:
-                passvalue
-            else:
-                failvalue
+macro return for statement:
+    as return $statement:
+        Emit.Return($subatom)
+        
 
+macro witnessed for methoddef:
+    as witnessed $methoddef:
+        pass

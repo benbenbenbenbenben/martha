@@ -21,7 +21,7 @@ as $atom (for $atom.reference in $atom.range):
 `, 
             identity:""
         })
-        console.log(program0.macros[0].rules)
+        console.log(program0.macros)
         martha.load(program0)
         let program1 = martha.parse(
             {source:

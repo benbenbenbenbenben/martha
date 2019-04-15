@@ -227,7 +227,8 @@ export class List {
 @serializable
 export class MacroDef {
     name!: Token
-    rules?: MacroRuleDef[]
+    insert!: Token
+    rule?: MacroRuleDef
 }
 
 @serializable

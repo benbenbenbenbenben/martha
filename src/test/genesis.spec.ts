@@ -17,9 +17,10 @@ function parse(file:string):ProgramDef {
 
 describe("genesis", () => {
     let f = parse(__dirname + "../../genesis/Macros.ma")
+    console.log(f)
     console.log(f.macros)
-    console.log(f.types[0].members)
-    console.log(f.types[0].basetype)
+    //console.log(f.types[0].members)
+    //console.log(f.types[0].basetype)
     return;
     let iballot = parse(__dirname + "../../genesis/IBallot.ma")
     let iparty = parse(__dirname + "../../genesis/IParty.ma")

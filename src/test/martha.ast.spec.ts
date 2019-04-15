@@ -25,19 +25,40 @@ describe('syntax.m', () => {
             expect(flat(c)).to.deep.eq(
                 [ Emit.Emit(TypeDef, {
                     name: Emit.Emit(Token, { value: "Binary", index: 5 }),
+                    basetype: undefined,
                     members: [
                         Emit.Emit(MemberDef, {
                             type: Emit.Emit(TypeRef, {
                                 nameref: [
                                     Emit.Emit(Reference, {
                                         name:
-                                        Emit.Emit(Token, {value:"object", index:0})
+                                        Emit.Emit(Token, {value:"object", index:17})
                                     })
                                 ],
+                                types: [],
+                                indexer: []
                             }),
-                            name: { value: "left", index: 0 }
+                            name: { value: "left", index: 25 },
+                            getter: [],
+                            setter: []
+                        }),
+                        Emit.Emit(MemberDef, {
+                            type: Emit.Emit(TypeRef, {
+                                nameref: [
+                                    Emit.Emit(Reference, {
+                                        name:
+                                        Emit.Emit(Token, {value:"object", index:34})
+                                    })
+                                ],
+                                types: [],
+                                indexer: []
+                            }),
+                            name: { value: "right", index: 42 },
+                            getter: [],
+                            setter: []
                         })
-                    ]
+                    ],
+                    methods: []
                 }) ] )
             proc = true
         }

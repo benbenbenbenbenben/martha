@@ -9,7 +9,10 @@ export class Martha {
         this.program = new ParserContext()
     }
     public parse(source:{source:string, identity:string}): ProgramDef {
-        return this.program.parse(source.source, source.identity)
+        let program = this.program.parse(source.source, source.identity)
+        let errors:any[] = []
+        this.visit(program, errors)
+        return program
     }
     public load(source:{source:string, identity:string} | ProgramDef): void {
         let programdef = source instanceof ProgramDef ? source : this.parse(source)
@@ -18,6 +21,7 @@ export class Martha {
     }
     private visit(programdef:ProgramDef, errors:any[]): void {
         // TODO visit imports
+        console.log(programdef.macros)
         this.visitMacros(programdef.macros, errors)
 
         // visittypes
@@ -31,6 +35,7 @@ export class Martha {
     private visitMacro(macro:MacroDef, errors:any[]):void {
         try { 
             this.program.addMacro(macro)
+            console.log(macro)
         }
         catch (e) {
             throw e

@@ -3,7 +3,7 @@ const { parse, token, rule, all, many, optional, either } = Tibu;
 
 import { AST } from "./martha.ast";
 import { ProgramDef } from "./martha.program";
-import { ImportDef, MacroDef, TypeDef } from "./martha.emit";
+import { ImportDef, MacroDef, TypeDef, Statement } from "./martha.emit";
 
 const flat = (arr:any[]): any[] => {
     return arr.reduce((acc, val) => Array.isArray(val) ?
@@ -359,6 +359,7 @@ class Kwrd {
     ctor         = token("ctor", /constructor/);
 
     macro        = "macro"
+    for          = "for"
     when         = "when"
     use          = "use"
 
@@ -724,8 +725,14 @@ class Def extends WithParserContext {
     macrodef = rule(
         this.context.util.block(
             rule(
-                all(this.context.kwrd.macro, this.context.ws.space1ton, either(this.context.ref._member, this.context.val.str))
-            ).yields(named("name")),
+                all(this.context.kwrd.macro,
+                    this.context.ws.space1ton, 
+                    rule(either(this.context.ref._member, this.context.val.str)).yields(named("name")), 
+                    this.context.ws.space1ton, 
+                    this.context.kwrd.for, 
+                    this.context.ws.space1ton, 
+                    rule(this.context.ref._member).yields(named("insert")))
+            ).yields(named("def")),
             rule(this.context.util.block(
                 rule(
                     this.context.kwrd.as,
@@ -980,9 +987,33 @@ class ParserContext {
         }
     }
 
+    public getSourceCode(astNode:any):string {
+        if (astNode.__TYPE__) { 
+            const typename = astNode.__proto__.constructor.name
+            if (typename == "Statement") {
+                let ops:Op[] = (astNode as Statement).statement
+                return ops.map(op => this.getSourceCode(op)).join("\r\n")
+            }
+            console.log(typename)
+            if (typename == "Apply") {
+                let lhs = this.getSourceCode(astNode.to)
+                let rhs = this.getSourceCode(astNode.apply)
+                return `${lhs} ${rhs}`
+            }
+            if (typename == "String") {
+                return "string"
+            }
+            if (typename == "Reference") {
+                return astNode.name.value
+            }
+        }
+        return astNode.__proto__.constructor.name
+    }
+
     public addMacro(macro:MacroDef):void {
         console.log("## VISIT MACRO")
-        const identity = (x:MacroDef) => x.name
+        const identity = (x:MacroDef) => x.rule!.rule.map(rule => `${x.insert.value}#${this.getSourceCode(rule)}`)
+        console.log(identity(macro))
         if (this.macroDefs.find(x => identity(x) === identity(macro))) {
             throw new Error(`Macro ${identity(macro)} is already registered.`)
         }

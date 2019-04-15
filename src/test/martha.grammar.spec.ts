@@ -2,7 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { AST } from "../martha.ast";
 import { Tibu, ResultTokens, Result } from "tibu";
-import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef, Dot, TypeDef, Div, Token, TypeRef, MemberDef } from "../martha.emit";
+import { MethodAccess, Emit, Reference, Literal, Assignment, Plus, Mult, Minus, Gt, Dot_Prefix, ReturnDef, ArgumentDef, Lt, Statement, MethodDef, Dot, TypeDef, Div, Token, TypeRef, MemberDef, MacroDef, MacroRuleDef, Apply, BracketParen } from "../martha.emit";
 import { ParserContext } from "../martha.grammar";
 const { parse, rule, either, many, all, optional } = Tibu;
 
@@ -29,6 +29,7 @@ describe("types", () => {
             expect(Tibu.parse(`Bar`)(Def.typedef_basetype)[0].cst).to.deep.eq([[{
                 __TYPE__: 'TypeRef',
                 nameref: [ { __TYPE__: 'Reference', name: { value: 'Bar', index: 0 } } ],
+                types: [],
                 indexer: []
             }]]);
         });
@@ -39,6 +40,7 @@ describe("types", () => {
                 { 
                     __TYPE__: 'TypeRef',
                     nameref: [ { __TYPE__: 'Reference', name: { value: 'Type', index: 0 } } ],
+                    types: [],
                     indexer: [] 
                 },
                 name: { value: 'Member', index: 6 },
@@ -55,6 +57,7 @@ describe("types", () => {
                             nameref: [
                                 Emit.Emit(Reference, { name: { value: "Bar", index: 12 } })
                             ],
+                            types: [],
                             indexer: []
                         }
                     ),
@@ -80,13 +83,15 @@ describe("types", () => {
                     name: {value:"Foo", index:5},
                     basetype: Emit.Emit(TypeRef, {
                         nameref: [Emit.Emit(Reference, {name:{value:"Bar", index:12}})],
+                        types: [],
                         indexer: []
                     }),
                     members:[
                         Emit.Emit(MemberDef, {
                             type: Emit.Emit(TypeRef, {
                                 nameref:[Emit.Emit(Reference,{name:{value:"Party",index:21}})],
-                                indexer:[]
+                                types: [],
+                                indexer: []
                             }),
                             name: {value:"this",index:28},
                             getter:[],
@@ -257,7 +262,8 @@ describe("Def", () => {
                 type: 
                 { __TYPE__: 'TypeRef',
                 nameref: [ { __TYPE__: 'Reference', name: { value: 'void', index: 0 } } ],
-                indexer: [] },
+                indexer: [],
+                types: [] },
                 spec: [] } 
             ])
             expect(r.tokens.length).to.eq(0)
@@ -284,6 +290,7 @@ describe("Def", () => {
                         }
                       }
                     ],
+                    "types": [],
                     "indexer": []
                   },
                   "spec": [
@@ -378,6 +385,7 @@ describe("Def", () => {
                                 type: [
                                     Emit.Emit(TypeRef, { 
                                         nameref: [Emit.Emit(Reference, {name:{value:"int",index:12}})], 
+                                        types: [],
                                         indexer: []
                                     })
                                 ],
@@ -412,6 +420,7 @@ describe("Def", () => {
                                 type: [
                                     Emit.Emit(TypeRef, { 
                                         nameref: [Emit.Emit(Reference, {name:{value:"Y",index:17}})], 
+                                        types: [],
                                         indexer: []
                                     })
                                 ],
@@ -422,6 +431,7 @@ describe("Def", () => {
                                 type: [
                                     Emit.Emit(TypeRef, { 
                                         nameref: [Emit.Emit(Reference, {name:{value:"U",index:22}})], 
+                                        types: [],
                                         indexer: []
                                     })
                                 ],
@@ -432,6 +442,7 @@ describe("Def", () => {
                                 type: [
                                     Emit.Emit(TypeRef, { 
                                         nameref: [Emit.Emit(Reference, {name:{value:"P",index:27}})], 
+                                        types: [],
                                         indexer: []
                                     })
                                 ],
@@ -459,6 +470,7 @@ describe("Def", () => {
                                 nameref: [
                                     Emit.Emit(Reference, {name:{value:"void", index:7}})
                                 ],
+                                types: [],
                                 indexer: []
                             }),
                             spec: []
@@ -489,19 +501,84 @@ describe("Def", () => {
     describe("macrodef", () => {
         it('accepts macro: return when: return $subatom use: Emit.Return($subatom)', () => {
             // input
-            let input = 'macro return:\nwhen: return $subatom\nuse: Emit.Return($subatom)'
+            let input = `
+macro return for statement:
+    as return $subatom:
+        Emit.Return($subatom)
+`.trim()
             let proc = false
             // output
             let output = (r:ResultTokens, c:any) => {
-                expect(flat(c)).to.deep.eq([{
-                    name: "return",
-                    when: [{statement:[
-                        { apply: { name: "$subatom" }, to: { name: "return" } }
-                    ]}],
-                    use: [{statement:[
-                        { apply: { parenthesis: [ { name: "$subatom" } ] }, to: { name: "Emit.Return" } }
-                    ]}]
-                }])
+                expect(flat(c)).to.deep.eq([
+                    {
+                      "__TYPE__": "MacroDef",
+                      "name": {
+                        "value": "return",
+                        "index": 6
+                      },
+                      "insert": {
+                        "value": "statement",
+                        "index": 17
+                      },
+                      "rule":
+                        {
+                          "__TYPE__": "MacroRuleDef",
+                          "rule": [
+                            {
+                              "__TYPE__": "Statement",
+                              "statement": [
+                                {
+                                  "__TYPE__": "Apply",
+                                  "apply": {
+                                    "__TYPE__": "Reference",
+                                    "name": {
+                                      "value": "$subatom",
+                                      "index": 42
+                                    }
+                                  },
+                                  "to": {
+                                    "__TYPE__": "Reference",
+                                    "name": {
+                                      "value": "return",
+                                      "index": 35
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "body": [
+                            {
+                              "__TYPE__": "Statement",
+                              "statement": [
+                                {
+                                  "__TYPE__": "Apply",
+                                  "apply": {
+                                    "__TYPE__": "BracketParen",
+                                    "statements": [
+                                      {
+                                        "__TYPE__": "Reference",
+                                        "name": {
+                                          "value": "$subatom",
+                                          "index": 72
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "to": {
+                                    "__TYPE__": "Reference",
+                                    "name": {
+                                      "value": "Emit.Return",
+                                      "index": 60
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                    }
+                  ])
                 proc = true
             }
             parse(input)(rule(Def.macrodef).yields(output))
@@ -510,7 +587,7 @@ describe("Def", () => {
         it('accepts macro: foringenerator', () => {
             // input
             let input = 
-`macro: foringenerator
+`macro foringenerator for Statement:
 as $atom ($statement for $atom.reference in $atom.range):
     $statement.bind $atom.reference $atom.range.current
     emit(Generator, {
