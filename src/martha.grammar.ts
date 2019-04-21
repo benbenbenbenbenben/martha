@@ -410,7 +410,7 @@ class Ws extends WithParserContext {
                         }
     IND_WS       = rule(this.space0ton, optional(this.IND));
     ANY_WS       = rule(/[\t\r\n\s]*/);
-    lr0ton       = (token:Pattern) => rule(this.space0ton, token, this.space0ton) 
+    lr0ton       = (token:Pattern) => rule(this.space0ton, token, this.space0ton)
 }
 class Util extends WithParserContext {
     constructor(context:ParserContext) {
@@ -677,13 +677,7 @@ class Def extends WithParserContext {
         this.context.util.block(
             all(
                 rule(() => this.membermodifiers).yields(named("accessors")),
-                either(
-                    this.context.kwrd.ctor,
-                    all(this.returndef, this.context.ws.space1ton, token("name", /\w+/i))
-                ),
-                this.context.ws.lr0ton(this.context.op.lparen),
-                    optional(this.argumentdefs),
-                this.context.ws.lr0ton(this.context.op.rparen),
+                rule(() => this.context.def.typedef_type).yields(named("type")),
                 optional(
                     this.context.ws.lr0ton(this.context.op.arrow),
                     // next state(s)
@@ -792,7 +786,7 @@ class Def extends WithParserContext {
             rule(
                 this.context.ref.member, 
                 optional(this.context.ws.space1ton, this.context.ref.member)
-            ).yields(named("name"))
+            ).yields(named("names"))
         ),
         // function
         optional(
@@ -817,11 +811,21 @@ class Def extends WithParserContext {
             rule(
                 this.context.op.lsquare,
                 optional(
-                    all(() => this.context.def.typedef_index)
+                    () => this.context.def.typedef_index
                 ),
                 this.context.op.rsquare
             ).yields(named("indexer"))
         ),
+        // func type
+        optional(
+            rule(
+                this.context.op.lparen,
+                optional(
+                    () => this.argumentdefs
+                ),
+                this.context.op.rparen
+            ).yields(named("function"))
+        )
     )
     .yields(AST.typedef_index)
     ;
@@ -899,9 +903,9 @@ class Def extends WithParserContext {
             ),
             rule(
                 many(either(
+                    this.typedef_stateblock,
                     this.methoddef,
-                    this.typedef_member,
-                    this.typedef_stateblock
+                    this.typedef_member
                 ))
             )
         )

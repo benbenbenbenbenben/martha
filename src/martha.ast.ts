@@ -94,12 +94,12 @@ class AST {
         let returndef = cst && flat(cst).find((x:any) => x instanceof ReturnDef)
         let output = emit(MethodDef, {
             // TODO: new Token s/c because unknown definitily typed behaviour around ||
-            name: result.one("ctor") || result.one("name") || new Token(),
+            name: flat(named(fcst, "type").cst)[0].nameref.reverse()[0] || new Token(),
             attributes: cst && flat(cst).filter(isa(Attribute)),
             accessors: accessors.result.tokens.map((t:any) => emit(Token, {value:t.result.value, index:t.result.startloc})),
             arguments: cst ? flat(flat(cst).filter((x:any) => x.op == "argdefs").map((x:any) => x.parameters)) : [],
             body: cst ? flat(cst).filter((x:any) => x instanceof Statement) : [],
-            return: returndef,
+            return: returndef || flat(named(fcst, "type").cst)[0].nameref.slice(1).reverse(),
         })
 
         // next state for transitional methoddefs        
@@ -117,6 +117,7 @@ class AST {
     static typedef(result:ResultTokens, cst:any):any {
         let fcst = flat(cst)
         let stateblocks = named(fcst, "stateblocks")
+        console.log(stateblocks && stateblocks.cst[0])
         let basetype = named(fcst, "basetype")
         let types:any[] = fcst
             .filter(x => x)
@@ -139,11 +140,11 @@ class AST {
 
     static stateblock(result:ResultTokens, cst:any):StateBlockDef {
         let fcst = flat(cst) // ?
-        flat(named(fcst, "body").cst) // ?
         let state = named(fcst, "state").cst[0] // ?
-        let members = fcst.filter(isa(MemberDef))
-        let methods = fcst.filter(isa(MethodDef))
-        let substates = fcst.filter(isa(StateBlockDef))
+        let body = flat(named(fcst, "body").cst || []) // ?
+        let members = body.filter(isa(MemberDef))
+        let methods = body.filter(isa(MethodDef))
+        let substates = body.filter(isa(StateBlockDef))
         let statedef = emit(StateBlockDef, {
             state,
             members,
@@ -154,10 +155,9 @@ class AST {
     }
 
     static typedef_index(result:ResultTokens, cst:any):TypeRef {
-        //console.log(flat(flat(namedmany(cst, "types"))[0].cst))
         let ref = emit(TypeRef, {
             callreturn: cst ? flat(namedmany(cst, "return").map(c => AST.typedef_index(result, c.cst)))[0] : undefined,
-            nameref: cst ? flat(namedmany(cst, "name").map(c => c.cst)) : undefined,
+            nameref: cst ? flat(namedmany(cst, "names").map(c => c.cst)) : undefined,
             types: cst ? flat(namedmany(cst, "types").map(c => AST.typedef_index(result, c.cst))) : undefined,
             indexer: cst ? flat(namedmany(cst, "indexer").map(c => AST.typedef_index(result, c.cst || []))) : undefined,
         })

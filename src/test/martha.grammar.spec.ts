@@ -326,9 +326,9 @@ describe("Def", () => {
             let input = "{.x}"
             // output
             let output = (r:ResultTokens, c:any) => {
-                console.log(JSON.stringify(flat(c)))
-                expect(flat(c)).to.deep.eq(
-                    [
+                // TODO: why does this need JSON stringify??
+                expect(JSON.stringify(flat(c))).to.deep.eq(
+                    JSON.stringify([
                         {
                           "named": "argspec",
                           "result": {
@@ -340,7 +340,8 @@ describe("Def", () => {
                                   "startloc": 1,
                                   "endloc": 1,
                                   "value": "",
-                                  "children": []
+                                  "children": [],
+                                  yielded: undefined
                                 }
                               }
                             ]
@@ -360,7 +361,7 @@ describe("Def", () => {
                             }
                           ]
                         }
-                      ]
+                      ])
                 )
             }
             parse(input)(rule(Def.argumentspec).yields(output))
@@ -370,11 +371,22 @@ describe("Def", () => {
              let input = "{.x.y}"
              // output
              let output = (r:ResultTokens, c:any) => {
-                 expect(flat(c)).to.deep.eq([
-                     Emit.Emit(Statement, { statement: 
-                        [{ name: "this.x.y" }]
-                    })
-                 ])
+                 expect(JSON.stringify(flat(c))).to.deep.eq(
+                    JSON.stringify([ { named: 'argspec',
+                    result: 
+                     { tokens: 
+                        [ { name: 'spec',
+                            result: 
+                             { success: true,
+                               startloc: 1,
+                               endloc: 1,
+                               value: '',
+                               children: [],
+                               yielded: undefined } } ] },
+                    cst: 
+                     [ { __TYPE__: 'Statement',
+                         statement: [ { __TYPE__: 'Reference', name: { value: 'this.x.y', index: 1 } } ] } ] } ])
+                 )
              }
              parse(input)(rule(Def.argumentspec).yields(output))
           })
