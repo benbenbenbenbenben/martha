@@ -10,17 +10,67 @@
 # block is: block: $statement*
 # atom is: atom
 
-type: 
-    Binary
-with:
+type Binary:
     object: left
     object: right
 
-type: 
-    ConditionalDot
-is: 
-    Binary
+type ConditionalDot:
+is: Binary
 
 macro: ?.
-is: postfix
-as: emit(ConditionalDot, { value: this.$atom })
+    is: postfix
+    as: emit(ConditionalDot, { value: this.$atom })
+
+macro: ?.
+    is: postfix
+
+type WitnessedAttribute is VisitAttribute:
+    void visit(context: object):
+        pass
+
+macro witnessed for methoddef:
+    static WitnessedAttribute: witnessedAttribute = new WitnessedAttribute
+    rule witnessed $methoddef:
+        # add attribute to method to make sure it get's visited
+        # this variable should be static (as in global for the witnessed macro type)
+        $methoddef.attributes.add(new Attribute():
+            body = [
+                new Reference():
+                    name = "witnessed"
+            ]
+        )
+
+        # patch body to throw at runtime
+        $methoddef.body = <[
+            if not context.witnessed:
+                throw "this method was not witnessed"
+            $methoddef.body
+        ]>
+
+macro witnessedmethoddef for $methoddef:
+    as witnessed $methoddef:
+        $methoddef.attributes.add context.parse(context.rules.attribute, "@witnessed")
+        $methoddef.body.shift <[
+            if not runtime.context.witnessed:
+                throw "this method was not witnessed"
+        ]>
+
+
+macro witnessed for $methoddef:
+    const string: pattern = "witnessed"
+    constructor():
+        $methoddef.keyword.push(parserVisitor)
+    void visit($methoddef:context):
+        pass
+
+
+
+
+
+pipeline:
+
+parse
+- build tree
+- register macros
+visit macros
+- transform tree

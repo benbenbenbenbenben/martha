@@ -16,9 +16,13 @@ function parse(file:string):ProgramDef {
 }
 
 describe("genesis", () => {
-    let f = parse(__dirname + "../../genesis/Macros.ma")
-    console.log(f)
-    console.log(f.macros)
+    let f = parse(__dirname + "../../genani/genesis.1.ma")
+    console.log(f.imports[0])
+    console.log(f.types)
+    console.log(f.types[0].members)
+    console.log(f.types[0].methods)
+    console.log(f.types[0].states)
+    
     //console.log(f.types[0].members)
     //console.log(f.types[0].basetype)
     return;

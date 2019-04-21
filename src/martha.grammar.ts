@@ -362,8 +362,11 @@ class Kwrd {
     for          = "for"
     when         = "when"
     use          = "use"
+    from         = "from"
 
-    type         = "type";
+    type         = "type"
+    machine      = "machine"
+    state        = "state"
     interface    = "interface"
     is           = "is";
     as           = "as";
@@ -415,7 +418,6 @@ class Util extends WithParserContext {
     }
     indents:string[] = [];
     pushIndent       = rule(this.context.ws.space0ton, this.context.ws.newline, this.context.ws.indent).yields((r:ResultTokens) => {
-        console.log("push")
         this.indents.push(r.one("indent")!.value);
     });
     peekIndent       = rule(this.context.ws.newline, (input:Input):Result => {
@@ -427,7 +429,6 @@ class Util extends WithParserContext {
         return Result.fault(input);
     });
     popIndent        = rule((input:Input):Result => {
-        console.log("pop")
         this.indents.pop();
         return Result.pass(input);
     });
@@ -656,11 +657,11 @@ class Def extends WithParserContext {
     )
     .yields(AST.argumentsspec)
     ;
-    argumentdef = rule(
+    argumentdef = rule( 
         optional(this.context.op.splat),
-        () => this.context.def.typedef_type,
+        this.context.ws.lr0ton(this.context.ref.varname),
         this.context.op.infix_colon,
-        this.context.ws.lr0ton(this.context.ref.varname), 
+        () => this.context.def.typedef_type,
         optional(this.argumentspec)
     )
     .yields(AST.argumentdef)
@@ -675,26 +676,19 @@ class Def extends WithParserContext {
         optional(rule("@", this.context.stmt.statement, /\s*/).yields(AST.attribute)),
         this.context.util.block(
             all(
-                rule(many(either(
-                    this.context.kwrd.anyaccess,
-                    this.context.kwrd.abstract,
-                    this.context.kwrd.export,
-                    this.context.kwrd.extern,
-                    this.context.kwrd.static,
-                    this.context.kwrd.async,
-                    this.context.kwrd.atomic,
-                    this.context.kwrd.critical,
-                    ), this.context.ws.space1ton)
-                ).yields(named("accessors")),
+                rule(() => this.membermodifiers).yields(named("accessors")),
                 either(
-                    all(this.returndef, this.context.ws.lr0ton(this.context.op.colon), token("name", /\w+/)),
-                    this.context.kwrd.ctor
+                    this.context.kwrd.ctor,
+                    all(this.returndef, this.context.ws.space1ton, token("name", /\w+/i))
                 ),
+                this.context.ws.lr0ton(this.context.op.lparen),
+                    optional(this.argumentdefs),
+                this.context.ws.lr0ton(this.context.op.rparen),
                 optional(
-                    this.context.ws.lr0ton(this.context.op.lparen),
-                        optional(this.argumentdefs),
-                    this.context.ws.lr0ton(this.context.op.rparen)
-                ),
+                    this.context.ws.lr0ton(this.context.op.arrow),
+                    // next state(s)
+                    rule(this.context.ref.member).yields(named("nextstate"))
+                )
             ),
             this.context.stmt.statement
         )
@@ -731,7 +725,7 @@ class Def extends WithParserContext {
                     this.context.ws.space1ton, 
                     this.context.kwrd.for, 
                     this.context.ws.space1ton, 
-                    rule(this.context.ref._member).yields(named("insert")))
+                    rule(this.context.ref.member).yields(named("insert")))
             ).yields(named("def")),
             rule(this.context.util.block(
                 rule(
@@ -751,12 +745,37 @@ class Def extends WithParserContext {
     .yields(AST.flatcst)
     ;
 
+    membermodifiers = rule(many(
+        either(
+            this.context.kwrd.anyaccess,
+            this.context.kwrd.abstract,
+            this.context.kwrd.export,
+            this.context.kwrd.extern,
+            this.context.kwrd.static,
+            this.context.kwrd.async,
+            this.context.kwrd.atomic,
+            this.context.kwrd.critical,
+        ), 
+        this.context.ws.space1ton
+        )
+    ).yields(named("modifiers"))
+
     membernames = rule(this.context.ref.member, many(optional(this.context.op.infix_comma, this.context.ref.member)))
     .yields((result:ResultTokens, cst:any) => {
         return flat(cst);
     });
 
-    importdef = rule(this.context.kwrd.import, this.context.ws.space1ton, this.context.ref.member)
+    importdef = rule(
+        this.context.kwrd.import,
+        this.context.ws.space1ton, 
+        rule(this.context.ref.member).yields(named("name")),
+        optional(
+            this.context.ws.space1ton, 
+            this.context.kwrd.from, 
+            this.context.ws.space1ton, 
+            rule(this.context.ref.member).yields(named("library"))
+        )
+    )
     .yields(AST.importdef)
     ;
     importdefs = rule(many(this.importdef, optional(this.context.ws.ANY_WS)))
@@ -769,9 +788,17 @@ class Def extends WithParserContext {
     .yields(AST.typedef_name)
     ;
     typedef_index = rule(
-        rule(this.context.ref.member,        
-            many(this.context.ws.space1ton, this.context.ref.member)
-        ).yields(named("name")),
+        rule(
+            rule(
+                this.context.ref.member, 
+                optional(this.context.ws.space1ton, this.context.ref.member)
+            ).yields(named("name"))
+        ),
+        // function
+        optional(
+            rule(this.context.ws.space0ton, this.context.op.fatarrow, this.context.ws.space0ton),
+            rule(all(() => this.context.def.typedef_index)).yields(named("return"))
+        ),
         // TODO: generic
         optional(
             rule(
@@ -804,13 +831,17 @@ class Def extends WithParserContext {
     .yields(AST.typedef_type)
     ;
     typedef_member = rule(
-        this.typedef_index,
-        this.context.op.infix_colon, 
+        this.membermodifiers,
         this.membernames, 
+        this.context.op.infix_colon, 
+        rule(this.typedef_index).yields(named("type")),
         optional(
             either(
+                // auto compute functions
                 all(this.context.ws.lr0ton(this.context.op.fatarrow), this.context.stmt.statement),
+                // static variables
                 all(this.context.ws.lr0ton(this.context.op.assign), this.context.stmt.statement),
+                // getter settter blocks
                 all(
                     this.context.ws.space1ton,
                     this.context.util.block(
@@ -835,9 +866,29 @@ class Def extends WithParserContext {
     typedef_basetype = rule(() => this.context.def.typedef_type)
     .yields(named("basetype"))
     ;
+    typedef_stateblock = rule(
+        this.context.util.block(
+            rule(
+                this.context.kwrd.state,
+                this.context.ws.space1ton,
+                rule(this.context.ref.member).yields(named("state"))
+            ),
+            rule(
+                many(either(
+                    () => this.typedef_stateblock,
+                    this.methoddef,
+                    this.typedef_member
+                ))
+            ).yields(named("body"))
+        ).yields(AST.stateblock)
+    )
+    .yields(named("stateblocks"))
+    ;
     typedef = rule(
         this.context.util.block(
-            rule(this.context.kwrd.type, this.context.ws.space1ton, 
+            rule(
+                either(this.context.kwrd.type, this.context.kwrd.machine), 
+                this.context.ws.space1ton, 
                 this.typedef_name, 
                 optional(
                     this.context.ws.space1ton, 
@@ -849,7 +900,8 @@ class Def extends WithParserContext {
             rule(
                 many(either(
                     this.methoddef,
-                    this.typedef_member
+                    this.typedef_member,
+                    this.typedef_stateblock
                 ))
             )
         )
@@ -991,13 +1043,13 @@ class ParserContext {
         if (astNode.__TYPE__) { 
             const typename = astNode.__proto__.constructor.name
             if (typename == "Statement") {
-                let ops:Op[] = (astNode as Statement).statement
+                const ops = (astNode as Statement).statement
                 return ops.map(op => this.getSourceCode(op)).join("\r\n")
             }
             console.log(typename)
             if (typename == "Apply") {
-                let lhs = this.getSourceCode(astNode.to)
-                let rhs = this.getSourceCode(astNode.apply)
+                const lhs = this.getSourceCode(astNode.to)
+                const rhs = this.getSourceCode(astNode.apply)
                 return `${lhs} ${rhs}`
             }
             if (typename == "String") {
@@ -1017,14 +1069,14 @@ class ParserContext {
         if (this.macroDefs.find(x => identity(x) === identity(macro))) {
             throw new Error(`Macro ${identity(macro)} is already registered.`)
         }
-        /*
-        let parts = macro.rule.map((t:string) => {
-            if (t.startsWith("$")) {
-                return this.getRuleRef(t)
-            } else {
-                return this.ws.lr0ton(token(t, t))
-            }
+
+        let parts = macro.rule!.rule.map((rule:Statement) => {
+            return rule.statement.map(stmt => {
+                console.log(stmt)
+                return stmt
+            })
         })
+        /*
         console.log(parts)
         this.macroDefs.push(macro)
         this.addRule({

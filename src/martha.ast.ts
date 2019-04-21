@@ -2,7 +2,7 @@
 import { Tibu, Result, ResultTokens, Input, IRule, IToken, Pattern, IRuleAction } from "tibu";
 const { parse, token, rule, all, many, optional, either } = Tibu;
 
-import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List, MacroDef, ImportDef, TypeDef, Lambda, Range, TypeRef, ColonBin, QuesBin, ExcBin, IfExp, Attribute, MacroRuleDef, MemberDef, Token, Apply, BracketParen, BracketArray, BracketCurly } from "./martha.emit";
+import { Emit, MethodAccess, Literal, Reference, Assignment, PlusEq, MinusEq, MultEq, DivEq, ModEq, ShREq, ShLEq, AmpEq, CaretEq, PipeEq, PowerEq, Mult, Power, Div, Mod, Plus, Minus, ShiftLeft, ShiftRight, Lt, Lte, Gt, Gte, EqEq, NotEq, Amp, Caret, Pipe, AmpAmp, PipePipe, MinusMinus, PlusPlus, Plus_Prefix, Minus_Prefix, Exc, Tilde, Splat, TypeOf, AddrOf, SizeOf, StateOf, SwapTo, New, Delete, Return, Arrow, Dot, ConditionalDot, PlusPlus_Postfix, MinusMinus_Postfix, Dot_Prefix, ReturnDef, ArgumentDef, Statement, MethodDef, List, MacroDef, ImportDef, TypeDef, Lambda, Range, TypeRef, ColonBin, QuesBin, ExcBin, IfExp, Attribute, MacroRuleDef, MemberDef, Token, Apply, BracketParen, BracketArray, BracketCurly, TransitioningMethodDef, StateBlockDef } from "./martha.emit";
 import { Op, Mcro } from "./martha.grammar";
 const emit = Emit.Emit
 
@@ -17,7 +17,8 @@ const isa = (T:any) => (x:any): boolean => {
 
 const namedmany = (cst:any[], name:string) => {
     const fcst = flat(cst)
-    return fcst.filter(x => x.named === name)
+    const result = fcst.filter(x => x.named === name)
+    return result
 }
 
 const named = (cst:any[], name:string) => {
@@ -62,7 +63,8 @@ class AST {
         return modcst
     }
 
-    static argumentdef(result:ResultTokens, cst:any):any {        
+    static argumentdef(result:ResultTokens, cst:any):any { 
+        console.log(result.tokens)       
         let argspec = named(flat(cst), "argspec")
         return emit(ArgumentDef, {
                 name: result.one("varname"),
@@ -90,7 +92,7 @@ class AST {
         let fcst = flat(cst)
         let accessors = named(fcst, "accessors")
         let returndef = cst && flat(cst).find((x:any) => x instanceof ReturnDef)
-        return emit(MethodDef, {
+        let output = emit(MethodDef, {
             // TODO: new Token s/c because unknown definitily typed behaviour around ||
             name: result.one("ctor") || result.one("name") || new Token(),
             attributes: cst && flat(cst).filter(isa(Attribute)),
@@ -99,10 +101,22 @@ class AST {
             body: cst ? flat(cst).filter((x:any) => x instanceof Statement) : [],
             return: returndef,
         })
+
+        // next state for transitional methoddefs        
+        let nextstate = named(fcst, "nextstate") ? named(fcst, "nextstate").cst : undefined
+        if (nextstate) {
+            output = emit(TransitioningMethodDef, {
+                ...output,
+                nextstate
+            })
+        }
+
+        return output //?
     }
 
     static typedef(result:ResultTokens, cst:any):any {
         let fcst = flat(cst)
+        let stateblocks = named(fcst, "stateblocks")
         let basetype = named(fcst, "basetype")
         let types:any[] = fcst
             .filter(x => x)
@@ -115,6 +129,7 @@ class AST {
                     }
                     type.members = fcst.filter(isa(MemberDef))
                     type.methods = fcst.filter(isa(MethodDef))
+                    type.states = stateblocks ? stateblocks.cst : undefined
                     return emit(TypeDef, type);
                 })
             }
@@ -122,9 +137,26 @@ class AST {
         return flat(types)
     }
 
+    static stateblock(result:ResultTokens, cst:any):StateBlockDef {
+        let fcst = flat(cst) // ?
+        flat(named(fcst, "body").cst) // ?
+        let state = named(fcst, "state").cst[0] // ?
+        let members = fcst.filter(isa(MemberDef))
+        let methods = fcst.filter(isa(MethodDef))
+        let substates = fcst.filter(isa(StateBlockDef))
+        let statedef = emit(StateBlockDef, {
+            state,
+            members,
+            methods,
+            substates
+        })
+        return statedef
+    }
+
     static typedef_index(result:ResultTokens, cst:any):TypeRef {
         //console.log(flat(flat(namedmany(cst, "types"))[0].cst))
         let ref = emit(TypeRef, {
+            callreturn: cst ? flat(namedmany(cst, "return").map(c => AST.typedef_index(result, c.cst)))[0] : undefined,
             nameref: cst ? flat(namedmany(cst, "name").map(c => c.cst)) : undefined,
             types: cst ? flat(namedmany(cst, "types").map(c => AST.typedef_index(result, c.cst))) : undefined,
             indexer: cst ? flat(namedmany(cst, "indexer").map(c => AST.typedef_index(result, c.cst || []))) : undefined,
@@ -140,10 +172,11 @@ class AST {
     static typedef_member(result:ResultTokens, cst:any):MemberDef[] {
         // TODO: memberdef type
         let fcst = flat(cst).filter(x => x)
+        named(fcst, "name") //?
         return  fcst
                 .filter(isa(Reference))
                 .map(x => emit(MemberDef, {
-                        type: fcst[0],
+                        type: named(fcst, "type").cst[0],
                         name: x.name,
                         getter: named(fcst, "getter") ? named(fcst, "getter").cst : [],
                         setter: named(fcst, "setter") ? named(fcst, "setter").cst : [],
@@ -435,15 +468,13 @@ class AST {
     }
 
     static macrodef(result:ResultTokens, cst:any):any {
-        let fcst = flat(cst)        
+        let fcst = flat(cst)
         let def = named(fcst, "def").cst
         let name = named(def, "name").result.one("member") || named(def, "name").result.one("string").match(/.(.*)./)[1] 
-        let insert = named(def, "insert").result.one("member")
-        console.log(insert)
+        let insert = named(def, "insert").cst[0] //?
         let rule = fcst.filter(isa(MacroRuleDef))[0]
 
-        let macro = emit(MacroDef, { name:emit(Token, name), insert:emit(Token, insert), rule })
-        console.log(macro.rule.rule[0].statement[0].apply)
+        let macro = emit(MacroDef, { name:emit(Token, name), insert, rule })
         return macro
     }
 
@@ -453,7 +484,10 @@ class AST {
     }
 
     static importdef(result:ResultTokens, cst:any):any {
-        return emit(ImportDef, { name: flat(cst).find(x => isa(Reference)(x)).name })
+        return emit(ImportDef, { 
+            name: named(flat(cst), "name").cst[0],
+            library: named(flat(cst), "library") ? named(flat(cst), "library").cst[0] : undefined
+        })
     }
 
     static expandmacro(macro:MacroDef):(result:ResultTokens, cst:any) => any {

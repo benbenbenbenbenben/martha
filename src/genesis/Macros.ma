@@ -1,8 +1,7 @@
-macro return for statement:
-    as return $statement:
+macro return for f.statement:
+    as return $subatom:
         Emit.Return($subatom)
-        
 
-macro witnessed for methoddef:
-    as witnessed $methoddef:
-        pass
+macro witnessed for methoddef.keyword:
+    as "witnessed":
+        

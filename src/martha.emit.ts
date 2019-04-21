@@ -173,12 +173,15 @@ export class MinusMinus_Postfix extends UnaryPostfix {}
 export class Emit {
     static Emit<T>(ctor:{new (): T}, m:T):T {
         //return new ctor()
+        delete (<any>m).__TYPE__
         return Object.assign(new ctor(), m)
     }
 }
 
 @serializable
 export class TypeRef {
+    modifiers?: Reference[]
+    callreturn?: TypeRef
     nameref?: Reference[]
     types?: TypeRef[]
     indexer?: TypeRef[]
@@ -220,6 +223,11 @@ export class MethodDef {
 }
 
 @serializable
+export class TransitioningMethodDef extends MethodDef {
+    nextstate!: Reference[]
+}
+
+@serializable
 export class List {
     elements!: any[]
 }
@@ -239,7 +247,8 @@ export class MacroRuleDef {
 
 @serializable
 export class ImportDef {
-    name!: Token
+    name!: Reference
+    library?: Reference
 }
 
 @serializable
@@ -256,6 +265,15 @@ export class TypeDef {
     basetype?: TypeRef
     members?: MemberDef[]
     methods?: MethodDef[]
+    states?: StateBlockDef[]
+}
+
+@serializable
+export class StateBlockDef {
+    state!: Reference
+    members?: MemberDef[]
+    methods?: MethodDef[]
+    substates?: StateBlockDef[]
 }
 
 @serializable

@@ -28,22 +28,24 @@ describe("types", () => {
         it("should parse a base type name", () => {
             expect(Tibu.parse(`Bar`)(Def.typedef_basetype)[0].cst).to.deep.eq([[{
                 __TYPE__: 'TypeRef',
+                callreturn: undefined,
                 nameref: [ { __TYPE__: 'Reference', name: { value: 'Bar', index: 0 } } ],
                 types: [],
                 indexer: []
             }]]);
         });
         it("should parse a type member", () => {
-            expect(Tibu.parse(`Type: Member`)(Def.typedef_member)).to.deep.eq([[{
+            expect(Tibu.parse(`Member: Type`)(Def.typedef_member)).to.deep.eq([[{
                 __TYPE__: 'MemberDef',
                 type: 
                 { 
                     __TYPE__: 'TypeRef',
-                    nameref: [ { __TYPE__: 'Reference', name: { value: 'Type', index: 0 } } ],
+                    callreturn: undefined,
+                    nameref: [ { __TYPE__: 'Reference', name: { value: 'Type', index: 8 } } ],
                     types: [],
                     indexer: [] 
                 },
-                name: { value: 'Member', index: 6 },
+                name: { value: 'Member', index: 0 },
                 getter: [],
                 setter: [] 
             }]]);
@@ -54,6 +56,7 @@ describe("types", () => {
                     name: { value: "Foo", index: 5 },
                     basetype: Emit.Emit(TypeRef, 
                         { 
+                            callreturn: undefined,
                             nameref: [
                                 Emit.Emit(Reference, { name: { value: "Bar", index: 12 } })
                             ],
@@ -62,7 +65,8 @@ describe("types", () => {
                         }
                     ),
                     members: [],
-                    methods: []
+                    methods: [],
+                    states: undefined
                 })
             ]]);
         });
@@ -72,16 +76,18 @@ describe("types", () => {
                     name: {value:"Foo",index:5},
                     basetype:undefined,
                     members:[], 
-                    methods:[] 
+                    methods:[],
+                    states: undefined
                 })
             ]]);
         });
         it("should parse a basic type with a member variable", () => {
-            expect(Tibu.parse(`type Foo is Bar:\n    Party: this`)(Def.typedef))
+            expect(Tibu.parse(`type Foo is Bar:\n    this: Party`)(Def.typedef))
             .to.deep.eq([[
                 Emit.Emit(TypeDef, {
                     name: {value:"Foo", index:5},
                     basetype: Emit.Emit(TypeRef, {
+                        callreturn: undefined,
                         nameref: [Emit.Emit(Reference, {name:{value:"Bar", index:12}})],
                         types: [],
                         indexer: []
@@ -89,29 +95,219 @@ describe("types", () => {
                     members:[
                         Emit.Emit(MemberDef, {
                             type: Emit.Emit(TypeRef, {
-                                nameref:[Emit.Emit(Reference,{name:{value:"Party",index:21}})],
+                                callreturn: undefined,
+                                nameref:[Emit.Emit(Reference,{name:{value:"Party",index:27}})],
                                 types: [],
                                 indexer: []
                             }),
-                            name: {value:"this",index:28},
+                            name: {value:"this",index:21},
                             getter:[],
                             setter:[]
                         })
                     ],
-                    methods:[]
+                    methods:[],
+                    states: undefined
                 }
             )]]);
         });
         it("should parse a 1+n type with member variables", () => {
-            expect(Tibu.parse(`type Foo, Bar is Base:\n    Addr: addr0, addr1`)(Def.typedefs)).to.deep.eq(
-                [[
-                    {
-                        name:"Foo", basetype:"Base", methods:[], members:[{type:"Addr",name:"addr0"},{type:"Addr",name:"addr1"}]
-                    },
-                    {
-                        name:"Bar", basetype:"Base", methods:[], members:[{type:"Addr",name:"addr0"},{type:"Addr",name:"addr1"}]
-                    }
-                ]]
+            expect(Tibu.parse(`type Foo, Bar is Base:\n    addr0, addr1: Addr`)(Def.typedefs)).to.deep.eq(
+                [
+                    [
+                       {
+                          __TYPE__:'TypeDef',
+                          name:{
+                             value:'Foo',
+                             index:5
+                          },
+                          basetype:{
+                             __TYPE__:'TypeRef',
+                             callreturn:undefined,
+                             nameref:[
+                                {
+                                   __TYPE__:'Reference',
+                                   name:{
+                                      value:'Base',
+                                      index:17
+                                   }
+                                }
+                             ],
+                             types:[
+                 
+                             ],
+                             indexer:[
+                 
+                             ]
+                          },
+                          members:[
+                             {
+                                __TYPE__:'MemberDef',
+                                type:{
+                                   __TYPE__:'TypeRef',
+                                   callreturn:undefined,
+                                   nameref:[
+                                      {
+                                         __TYPE__:'Reference',
+                                         name:{
+                                            value:'Addr',
+                                            index:41
+                                         }
+                                      }
+                                   ],
+                                   types:[
+                 
+                                   ],
+                                   indexer:[
+                 
+                                   ]
+                                },
+                                name:{
+                                   value:'addr0',
+                                   index:27
+                                },
+                                getter:[
+                 
+                                ],
+                                setter:[
+                 
+                                ]
+                             },
+                             {
+                                __TYPE__:'MemberDef',
+                                type:{
+                                   __TYPE__:'TypeRef',
+                                   callreturn:undefined,
+                                   nameref:[
+                                      {
+                                         __TYPE__:'Reference',
+                                         name:{
+                                            value:'Addr',
+                                            index:41
+                                         }
+                                      }
+                                   ],
+                                   types:[
+                 
+                                   ],
+                                   indexer:[
+                 
+                                   ]
+                                },
+                                name:{
+                                   value:'addr1',
+                                   index:34
+                                },
+                                getter:[
+                 
+                                ],
+                                setter:[
+                 
+                                ]
+                             }
+                          ],
+                          methods:[
+                 
+                          ],
+                          states:undefined
+                       },
+                       {
+                          __TYPE__:'TypeDef',
+                          name:{
+                             value:'Bar',
+                             index:10
+                          },
+                          basetype:{
+                             __TYPE__:'TypeRef',
+                             callreturn:undefined,
+                             nameref:[
+                                {
+                                   __TYPE__:'Reference',
+                                   name:{
+                                      value:'Base',
+                                      index:17
+                                   }
+                                }
+                             ],
+                             types:[
+                 
+                             ],
+                             indexer:[
+                 
+                             ]
+                          },
+                          members:[
+                             {
+                                __TYPE__:'MemberDef',
+                                type:{
+                                   __TYPE__:'TypeRef',
+                                   callreturn:undefined,
+                                   nameref:[
+                                      {
+                                         __TYPE__:'Reference',
+                                         name:{
+                                            value:'Addr',
+                                            index:41
+                                         }
+                                      }
+                                   ],
+                                   types:[
+                 
+                                   ],
+                                   indexer:[
+                 
+                                   ]
+                                },
+                                name:{
+                                   value:'addr0',
+                                   index:27
+                                },
+                                getter:[
+                 
+                                ],
+                                setter:[
+                 
+                                ]
+                             },
+                             {
+                                __TYPE__:'MemberDef',
+                                type:{
+                                   __TYPE__:'TypeRef',
+                                   callreturn:undefined,
+                                   nameref:[
+                                      {
+                                         __TYPE__:'Reference',
+                                         name:{
+                                            value:'Addr',
+                                            index:41
+                                         }
+                                      }
+                                   ],
+                                   types:[
+                 
+                                   ],
+                                   indexer:[
+                 
+                                   ]
+                                },
+                                name:{
+                                   value:'addr1',
+                                   index:34
+                                },
+                                getter:[
+                 
+                                ],
+                                setter:[
+                 
+                                ]
+                             }
+                          ],
+                          methods:[
+                 
+                          ],
+                          states:undefined
+                       }
+                    ]
+                 ]
             );});
         });
 })
@@ -130,13 +326,42 @@ describe("Def", () => {
             let input = "{.x}"
             // output
             let output = (r:ResultTokens, c:any) => {
-                console.log(c[0][0])
-                expect(flat(c)).to.deep.eq([
-                    { statement: [
-                            { name: "this.x" }
-                        ]
-                    }
-                 ])
+                console.log(JSON.stringify(flat(c)))
+                expect(flat(c)).to.deep.eq(
+                    [
+                        {
+                          "named": "argspec",
+                          "result": {
+                            "tokens": [
+                              {
+                                "name": "spec",
+                                "result": {
+                                  "success": true,
+                                  "startloc": 1,
+                                  "endloc": 1,
+                                  "value": "",
+                                  "children": []
+                                }
+                              }
+                            ]
+                          },
+                          "cst": [
+                            {
+                              "__TYPE__": "Statement",
+                              "statement": [
+                                {
+                                  "__TYPE__": "Reference",
+                                  "name": {
+                                    "value": "this.x",
+                                    "index": 1
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                )
             }
             parse(input)(rule(Def.argumentspec).yields(output))
          })
@@ -201,9 +426,22 @@ describe("Def", () => {
             let input = "{func}"
             // output
             let output = (r:ResultTokens, c:any) => {
-                expect(flat(c)).to.deep.eq([
-                    Emit.Emit(Reference, {name:{value:"func",index:1}})
-                ])
+                expect(flat(c)).to.deep.eq(
+                    [ { named: 'argspec',
+    result: 
+     { tokens: 
+        [ { name: 'spec',
+            result: 
+             { success: true,
+               startloc: 1,
+               endloc: 1,
+               value: '',
+               children: [],
+               yielded: undefined } } ] },
+    cst: 
+     [ { __TYPE__: 'Statement',
+         statement: [ { __TYPE__: 'Reference', name: { value: 'func', index: 1 } } ] } ] } ]
+                )
                 expect(r.tokens.length).to.eq(0)
             }
             parse(input)(rule(Def.argumentspec).yields(output))
@@ -212,16 +450,20 @@ describe("Def", () => {
     describe('argumentdef', () => {
         it('accepts Type:name', () => {
             // input
-            let input = "Type:name"
+            let input = "name:Type"
             // output
             let output = (r:ResultTokens, c:any) => {
-                expect(flat(c)).to.deep.eq([
-                    {
-                        type: "Type",
-                        name: "name",
-                        spec: [],
-                    }
-                ])
+                expect(flat(c)).to.deep.eq(
+                    [ { __TYPE__: 'ArgumentDef',
+                    name: { value: 'name', index: 0 },
+                    type: 
+                    [ { __TYPE__: 'TypeRef',
+                        callreturn: undefined,
+                        nameref: [ { __TYPE__: 'Reference', name: { value: 'Type', index: 5 } } ],
+                        types: [],
+                        indexer: [] } ],
+                    spec: [] } ]
+                )
                 expect(r.tokens.length === 2)
             }
             parse(input)(rule(Def.argumentdef).yields(output))
@@ -230,24 +472,28 @@ describe("Def", () => {
     describe('argumentdef', () => {
         it('accepts Type:name{.x > 10}', () => {
             // input
-            let input = "Type:name{.x > 10}"
+            let input = "name:Type{.x > 10}"
             // output
             let output = (r:ResultTokens, c:any) => {
-                expect(flat(c)).to.deep.eq([
-                    {
-                        __TYPE__:"ArgumentDef",
-                        type: [Emit.Emit(TypeRef, {
-
-                        })],
-                        name: {name:{value:"name",index:5}},
-                        spec: [
-                            Emit.Emit(Gt, { 
-                                left: Emit.Emit<Reference>(Reference, {name:{value:"this.x",index:10}}),
-                                right: Emit.Emit<Literal>(Literal, {type:"integer",value: {value:"10",index:15}})
-                            })
-                        ]
-                    }
-                ])
+                expect(flat(c)).to.deep.eq(
+                    [ { __TYPE__: 'ArgumentDef',
+                    name: { value: 'name', index: 0 },
+                    type: 
+                    [ { __TYPE__: 'TypeRef',
+                        callreturn: undefined,
+                        nameref: [ { __TYPE__: 'Reference', name: { value: 'Type', index: 5 } } ],
+                        types: [],
+                        indexer: [] } ],
+                    spec: 
+                    [ { __TYPE__: 'Statement',
+                        statement: 
+                        [ { __TYPE__: 'Gt',
+                            left: { __TYPE__: 'Reference', name: { value: 'this.x', index: 10 } },
+                            right: 
+                            { __TYPE__: 'Literal',
+                                type: 'integer',
+                                value: { value: '10', index: 15 } } } ] } ] } ]
+                )
                 expect(r.tokens.length === 2)
             }
             parse(input)(rule(Def.argumentdef).yields(output))
@@ -261,6 +507,7 @@ describe("Def", () => {
             expect(flat(c)).to.deep.eq([ { __TYPE__: 'ReturnDef',
                 type: 
                 { __TYPE__: 'TypeRef',
+                callreturn: undefined,
                 nameref: [ { __TYPE__: 'Reference', name: { value: 'void', index: 0 } } ],
                 indexer: [],
                 types: [] },
@@ -272,49 +519,28 @@ describe("Def", () => {
     })
     it('accepts int{> 10}', () => {
         // input
-        let input = 'void{> 10}'
+        let input = 'int{> 10}'
         let proc = false
         // output
         let output = (r:ResultTokens, c:any) => {
-            expect(flat(c)).to.deep.eq([
-                {
-                  "__TYPE__": "ReturnDef",
-                  "type": {
-                    "__TYPE__": "TypeRef",
-                    "nameref": [
-                      {
-                        "__TYPE__": "Reference",
-                        "name": {
-                          "value": "void",
-                          "index": 0
-                        }
-                      }
-                    ],
-                    "types": [],
-                    "indexer": []
-                  },
-                  "spec": [
-                    {
-                      "__TYPE__": "Gt",
-                      "left": {
-                        "__TYPE__": "Reference",
-                        "name": {
-                          "value": "this",
-                          "index": 5
-                        }
-                      },
-                      "right": {
-                        "__TYPE__": "Literal",
-                        "type": "integer",
-                        "value": {
-                          "value": "10",
-                          "index": 7
-                        }
-                      }
-                    }
-                  ]
-                }
-              ])
+            expect(flat(c)).to.deep.eq(
+                [ { __TYPE__: 'ReturnDef',
+    type: 
+     { __TYPE__: 'TypeRef',
+       callreturn: undefined,
+       nameref: [ { __TYPE__: 'Reference', name: { value: 'int', index: 0 } } ],
+       types: [],
+       indexer: [] },
+    spec: 
+     [ { __TYPE__: 'Statement',
+         statement: 
+          [ { __TYPE__: 'Gt',
+              left: { __TYPE__: 'Reference', name: { value: 'this', index: 4 } },
+              right: 
+               { __TYPE__: 'Literal',
+                 type: 'integer',
+                 value: { value: '10', index: 6 } } } ] } ] } ]
+            )
             expect(r.tokens.length).to.eq(0)
             proc = true
         }
@@ -348,7 +574,7 @@ describe("Def", () => {
     describe('methoddef', () => {
         it('accepts constructor:', () => {
             // input
-            let input = 'constructor:'
+            let input = 'constructor():'
             let proc = false
             // output
             let output = (r:ResultTokens, c:any) => {
@@ -368,10 +594,10 @@ describe("Def", () => {
             parse(input)(rule(Def.methoddef).yields(output))
             expect(proc).to.be.eq(true)
         })
-        it('accepts constructor(int:x):', () => {
+        it('accepts constructor(x:int):', () => {
             // input
             let proc = false
-            let input = 'constructor(int:x):'
+            let input = 'constructor(x:int):'
             // output
             let output = (r:ResultTokens, c:any) => {
                 expect(flat(c)).to.deep.eq([
@@ -381,10 +607,11 @@ describe("Def", () => {
                         accessors: [],
                         arguments: [
                             Emit.Emit(ArgumentDef,{
-                                name: { value: 'x', index: 16 },
+                                name: { value: 'x', index: 12 },
                                 type: [
                                     Emit.Emit(TypeRef, { 
-                                        nameref: [Emit.Emit(Reference, {name:{value:"int",index:12}})], 
+                                        callreturn: undefined,
+                                        nameref: [Emit.Emit(Reference, {name:{value:"int",index:14}})], 
                                         types: [],
                                         indexer: []
                                     })
@@ -402,24 +629,25 @@ describe("Def", () => {
             parse(input)(rule(Def.methoddef).yields(output))
             expect(proc).to.be.eq(true)
         })
-        it('accepts void func(Y:x, U:u, P:j{.len < u}):', () => {
+        it('accepts void func(x:Y, u:U, j:P{.len < i}):', () => {
             // input
             let proc = false
-            let input = 'public void: foo(Y:x, U:u, P:j{.len < i}): pass'
+            let input = 'public void foo(x:Y, u:U, j:P{.len < i}): pass'
             // output
             let output = (r:ResultTokens, c:any) => { 
                 console.log(JSON.stringify(c,null,2))
                 expect(flat(c)).to.deep.eq([
                     Emit.Emit(MethodDef, {
-                        name: {value:"foo", index:13},
+                        name: {value:"foo", index:12},
                         attributes:[],
                         accessors: [{value:"public", index:0}],
                         arguments: [
                             Emit.Emit(ArgumentDef,{
-                                name: { value: 'x', index: 19 },
+                                name: { value: 'x', index: 16 },
                                 type: [
                                     Emit.Emit(TypeRef, { 
-                                        nameref: [Emit.Emit(Reference, {name:{value:"Y",index:17}})], 
+                                        callreturn: undefined,
+                                        nameref: [Emit.Emit(Reference, {name:{value:"Y",index:18}})], 
                                         types: [],
                                         indexer: []
                                     })
@@ -427,10 +655,11 @@ describe("Def", () => {
                                 spec: []
                             }),
                             Emit.Emit(ArgumentDef,{
-                                name: { value: 'u', index: 24 },
+                                name: { value: 'u', index: 21 },
                                 type: [
                                     Emit.Emit(TypeRef, { 
-                                        nameref: [Emit.Emit(Reference, {name:{value:"U",index:22}})], 
+                                        callreturn: undefined,
+                                        nameref: [Emit.Emit(Reference, {name:{value:"U",index:23}})], 
                                         types: [],
                                         indexer: []
                                     })
@@ -438,10 +667,11 @@ describe("Def", () => {
                                 spec: []
                             }),
                             Emit.Emit(ArgumentDef, {
-                                name: { value: 'j', index: 29 },
+                                name: { value: 'j', index: 26 },
                                 type: [
                                     Emit.Emit(TypeRef, { 
-                                        nameref: [Emit.Emit(Reference, {name:{value:"P",index:27}})], 
+                                        callreturn: undefined,
+                                        nameref: [Emit.Emit(Reference, {name:{value:"P",index:28}})], 
                                         types: [],
                                         indexer: []
                                     })
@@ -461,12 +691,13 @@ describe("Def", () => {
                         body: [
                             Emit.Emit(Statement, {
                                 statement: [Emit.Emit(Reference, {
-                                    name:{value:"pass", index: 43}
+                                    name:{value:"pass", index: 42}
                                 })]
                             })
                         ],
                         return: Emit.Emit(ReturnDef, {
                             type: Emit.Emit(TypeRef, {
+                                callreturn: undefined,
                                 nameref: [
                                     Emit.Emit(Reference, {name:{value:"void", index:7}})
                                 ],
@@ -516,10 +747,14 @@ macro return for statement:
                         "value": "return",
                         "index": 6
                       },
-                      "insert": {
-                        "value": "statement",
-                        "index": 17
-                      },
+                      insert:
+                      { 
+                          __TYPE__: 'Reference',
+                          name: {
+                            value: 'statement', 
+                            index: 17 
+                          } 
+                      },    
                       "rule":
                         {
                           "__TYPE__": "MacroRuleDef",
@@ -586,18 +821,17 @@ macro return for statement:
         })
         it('accepts macro: foringenerator', () => {
             // input
-            let input = 
-`macro foringenerator for Statement:
-as $atom ($statement for $atom.reference in $atom.range):
-    $statement.bind $atom.reference $atom.range.current
-    emit(Generator, {
-        next = $atom.range.next,
-        current = $statement
-    })
+            let input = `
+macro foringenerator for $statement:
+as $statement for $atom.reference in $atom.range:
+    emit <[
+        () => for $atom.reference in $atom.range: yield $statement
+    ]>
 `    
             let proc = false
             // output
             let output = (r:ResultTokens, c:any) => {
+                c[0].rule /*?*/
                 expect(flat(c)).to.deep.eq([{
 
                 }])
@@ -727,13 +961,13 @@ else:
             let proc = false
             // output
             let output = (r:ResultTokens, c:any) => {
-                expect(flat(c)).to.deep.eq([
-                    { __TYPE__:"Statement", statement: [ 
-                        { 
-                            apply: { __TYPE__:"Reference", name: {value:'a',index:7} }, 
-                            to: { __TYPE__:"Reference", name: {value:'return',index:0} } 
-                        } ] }
-                ])
+                expect(flat(c)).to.deep.eq(
+                    [ { __TYPE__: 'Statement',
+    statement: 
+     [ { __TYPE__: 'Apply',
+         apply: { __TYPE__: 'Reference', name: { value: 'a', index: 7 } },
+         to: { __TYPE__: 'Reference', name: { value: 'return', index: 0 } } } ] } ]
+                )
                 proc = true
             }
             parse(input)(rule(Stmt.statement).yields(output))
