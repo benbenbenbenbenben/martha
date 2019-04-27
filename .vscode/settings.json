@@ -1,0 +1,7 @@
+{
+    "mocha.files.glob": "src/test/**/*.ts",
+    "mocha.requires": [
+        "ts-node/register"
+    ],
+    "wallaby.outputContentSize": 409600
+}

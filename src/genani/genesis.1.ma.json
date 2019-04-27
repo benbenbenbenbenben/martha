@@ -1,0 +1,104 @@
+{
+  "identity": "f:\\BACKUP\\Users\\ben\\Source\\Repos\\martha\\src\\test../../genani/genesis.1.ma",
+  "imports": [
+    {
+      "__TYPE__": "ImportDef",
+      "name": {
+        "__TYPE__": "Reference",
+        "name": {
+          "value": "OrganisationRegister",
+          "index": 7
+        }
+      },
+      "library": {
+        "__TYPE__": "Reference",
+        "name": {
+          "value": "organisation",
+          "index": 33
+        }
+      }
+    }
+  ],
+  "macros": [],
+  "types": [
+    {
+      "__TYPE__": "TypeDef",
+      "name": {
+        "value": "Genesis",
+        "index": 57
+      },
+      "members": [
+        {
+          "__TYPE__": "MemberDef",
+          "modifiers": [
+            {
+              "name": "static",
+              "result": {
+                "success": true,
+                "startloc": 72,
+                "endloc": 78,
+                "value": "static",
+                "children": []
+              }
+            }
+          ],
+          "name": {
+            "__TYPE__": "Reference",
+            "name": {
+              "value": "root",
+              "index": 79
+            }
+          }
+        },
+        {
+          "__TYPE__": "MemberDef",
+          "modifiers": [
+            {
+              "name": "static",
+              "result": {
+                "success": true,
+                "startloc": 103,
+                "endloc": 109,
+                "value": "static",
+                "children": []
+              }
+            }
+          ],
+          "name": {
+            "__TYPE__": "Reference",
+            "name": {
+              "value": "unlockScript",
+              "index": 110
+            }
+          }
+        }
+      ],
+      "states": [
+        {
+          "__TYPE__": "StateBlockDef",
+          "state": {
+            "__TYPE__": "Reference",
+            "name": {
+              "value": "unlocked",
+              "index": 222
+            }
+          },
+          "members": [
+            {
+              "__TYPE__": "MemberDef",
+              "modifiers": [],
+              "name": {
+                "__TYPE__": "Reference",
+                "name": {
+                  "value": "foo",
+                  "index": 242
+                }
+              }
+            }
+          ],
+          "substates": []
+        }
+      ]
+    }
+  ]
+}

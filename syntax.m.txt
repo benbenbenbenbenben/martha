@@ -64,7 +64,13 @@ macro witnessed for $methoddef:
         pass
 
 
-
+===========
+program
+    import
+        import $name:Reference (from $library:Reference)?
+    macro
+    type
+    statement
 
 
 pipeline:

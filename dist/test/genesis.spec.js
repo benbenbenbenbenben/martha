@@ -19,10 +19,16 @@ function parse(file) {
     return parsed;
 }
 describe("genesis", () => {
-    let f = parse(__dirname + "../../genesis/Macros.ma");
-    console.log(f.macros);
-    console.log(f.types[0].members);
-    console.log(f.types[0].basetype);
+    it("should be a program", () => {
+        try {
+            let f = parse(__dirname + "../../genani/genesis.1.ma");
+            f; /* ?+ */
+        }
+        catch (e) {
+            console.log(e);
+        }
+    });
+    return;
     let iballot = parse(__dirname + "../../genesis/IBallot.ma");
     let iparty = parse(__dirname + "../../genesis/IParty.ma");
     let itoken = parse(__dirname + "../../genesis/IToken.ma");

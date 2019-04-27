@@ -16,50 +16,19 @@ const Def = parserContext.def
 const Stmt = parserContext.stmt
 
 describe('syntax.m', () => {
-    it('accepts type:\n    Binary\nwith:\n    object: left\n    object: right\n', () => {
+    it('accepts type:\n    Binary\nwith:\n    left: object\n    right: object\n', () => {
         // input
-        let input = 'type Binary:\n    object: left\n    object: right\n'
+        let input = 'type Binary =\n    left: object\n    right: object\n'
         let proc = false
         // output
         let output = (r:ResultTokens, c:any) => {
-            expect(flat(c)).to.deep.eq(
-                [ Emit.Emit(TypeDef, {
-                    name: Emit.Emit(Token, { value: "Binary", index: 5 }),
-                    basetype: undefined,
-                    members: [
-                        Emit.Emit(MemberDef, {
-                            type: Emit.Emit(TypeRef, {
-                                nameref: [
-                                    Emit.Emit(Reference, {
-                                        name:
-                                        Emit.Emit(Token, {value:"object", index:17})
-                                    })
-                                ],
-                                types: [],
-                                indexer: []
-                            }),
-                            name: { value: "left", index: 25 },
-                            getter: [],
-                            setter: []
-                        }),
-                        Emit.Emit(MemberDef, {
-                            type: Emit.Emit(TypeRef, {
-                                nameref: [
-                                    Emit.Emit(Reference, {
-                                        name:
-                                        Emit.Emit(Token, {value:"object", index:34})
-                                    })
-                                ],
-                                types: [],
-                                indexer: []
-                            }),
-                            name: { value: "right", index: 42 },
-                            getter: [],
-                            setter: []
-                        })
-                    ],
-                    methods: []
-                }) ] )
+            const actual:TypeDef = flat(c)[0]
+            expect(actual.name.value).to.eq("Binary")
+            expect(actual.members!.length).to.eq(2)
+            expect(actual.members![0].name.value).to.eq("left")
+            expect(actual.members![1].name.value).to.eq("right")
+            expect(actual.members![0].type!.nameref![0].name.value).to.eq("object")
+            expect(actual.members![1].type!.nameref![0].name.value).to.eq("object")
             proc = true
         }
         parse(input)(rule(Def.typedef).yields(output))

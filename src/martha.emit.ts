@@ -181,10 +181,10 @@ export class Emit {
 @serializable
 export class TypeRef {
     modifiers?: Reference[]
-    callreturn?: TypeRef
     nameref?: Reference[]
-    types?: TypeRef[]
-    indexer?: TypeRef[]
+    typeargs?: TypeRef[]
+    indexargs?: TypeRef[]
+    callargs?: TypeRef[]
 }
 
 /*
@@ -208,13 +208,18 @@ export class ArgumentDef {
 }
 
 @serializable
+export class TupleArgumentDef {
+    arguments!: ArgumentDef[]
+}
+
+@serializable
 export class Statement {
     statement!: Op[]
 }
 
 @serializable
 export class MethodDef {
-    name!: Token
+    name?: Reference
     attributes?: Attribute[]
     accessors!: Token[]
     arguments!: ArgumentDef[]
@@ -253,10 +258,14 @@ export class ImportDef {
 
 @serializable
 export class MemberDef {
-    type!: TypeRef
+    modifiers?: Token[]
     name!: Token
+    arguments?: ArgumentDef[]
+    type?: TypeRef
+    transition?: Reference[]
     getter?: Statement[]
     setter?: Statement[]
+    body?: Statement[]
 }
 
 @serializable
@@ -264,7 +273,6 @@ export class TypeDef {
     name!: Token
     basetype?: TypeRef
     members?: MemberDef[]
-    methods?: MethodDef[]
     states?: StateBlockDef[]
 }
 
@@ -272,7 +280,6 @@ export class TypeDef {
 export class StateBlockDef {
     state!: Reference
     members?: MemberDef[]
-    methods?: MethodDef[]
     substates?: StateBlockDef[]
 }
 

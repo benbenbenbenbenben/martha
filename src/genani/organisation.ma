@@ -1,31 +1,29 @@
-type Attribute:
-    abstract object: value
-    abstract object: name
+type Attribute =
+    abstract value
+    abstract name
 
 type Member is ScriptHash | Address:
     Attribute[]: attributes
 
-type Organisation is Member:
-    Member[]: members
+type Organisation is Member =
+    members: Member[]
 
-type AttributeRegister is Attribute[string]:
-    override add():
+type AttributeRegister is Attribute[string]
+
+type IsDirector is Attribute =
+    name = "is-director"
+
+type IsExternal is Attribute =
+    name = "is-external"
+
+static OrganisationRegister is Organisation[string] =
+    root: Organisation
+    attributeRegister = new AttributeRegister()
+    add org =
         pass
-
-type IsDirector is Attribute:
-    object: name = "is-director"
-
-type IsExternal is Attribute:
-    object: name = "is-external"
-
-static OrganisationRegister is Organisation[string]:
-    Organisation: root
-    AttributeRegister: attributeRegister = new AttributeRegister()
-    add(Organisation: org):
-        pass
-    setRoot(Organisation: org{in this}):
+    setRoot org: Organisation{in this} =
         this.root = org
-    constructor():
+    new =
         this.attributeRegister.add("is-director", IsDirector)
         this.attributeRegister.add("is-external", IsExternal)
     

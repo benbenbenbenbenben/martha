@@ -7,7 +7,10 @@ class Martha {
         this.program = new martha_grammar_1.ParserContext();
     }
     parse(source) {
-        return this.program.parse(source.source, source.identity);
+        let program = this.program.parse(source.source, source.identity);
+        let errors = [];
+        this.visit(program, errors);
+        return program;
     }
     load(source) {
         let programdef = source instanceof martha_program_1.ProgramDef ? source : this.parse(source);
@@ -16,6 +19,7 @@ class Martha {
     }
     visit(programdef, errors) {
         // TODO visit imports
+        console.log(programdef.macros);
         this.visitMacros(programdef.macros, errors);
         // visittypes
         this.visitTypes(programdef.types, errors);
@@ -27,6 +31,7 @@ class Martha {
     visitMacro(macro, errors) {
         try {
             this.program.addMacro(macro);
+            console.log(macro);
         }
         catch (e) {
             throw e;

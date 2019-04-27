@@ -35,7 +35,7 @@ describe("types", () => {
             }]]);
         });
         it("should parse a type member", () => {
-            expect(Tibu.parse(`Member: Type`)(Def.typedef_member)).to.deep.eq([[{
+            expect(Tibu.parse(`Member: Type`)(Def.typedef_member_dec)).to.deep.eq([[{
                 __TYPE__: 'MemberDef',
                 type: 
                 { 
@@ -56,16 +56,14 @@ describe("types", () => {
                     name: { value: "Foo", index: 5 },
                     basetype: Emit.Emit(TypeRef, 
                         { 
-                            callreturn: undefined,
                             nameref: [
                                 Emit.Emit(Reference, { name: { value: "Bar", index: 12 } })
                             ],
-                            types: [],
-                            indexer: []
+                            typeargs: [],
+                            indexargs: []
                         }
                     ),
                     members: [],
-                    methods: [],
                     states: undefined
                 })
             ]]);
@@ -76,7 +74,6 @@ describe("types", () => {
                     name: {value:"Foo",index:5},
                     basetype:undefined,
                     members:[], 
-                    methods:[],
                     states: undefined
                 })
             ]]);
@@ -87,25 +84,22 @@ describe("types", () => {
                 Emit.Emit(TypeDef, {
                     name: {value:"Foo", index:5},
                     basetype: Emit.Emit(TypeRef, {
-                        callreturn: undefined,
                         nameref: [Emit.Emit(Reference, {name:{value:"Bar", index:12}})],
-                        types: [],
-                        indexer: []
+                        typeargs: [],
+                        indexargs: []
                     }),
                     members:[
                         Emit.Emit(MemberDef, {
                             type: Emit.Emit(TypeRef, {
-                                callreturn: undefined,
                                 nameref:[Emit.Emit(Reference,{name:{value:"Party",index:27}})],
-                                types: [],
-                                indexer: []
+                                typeargs: [],
+                                indexargs: []
                             }),
                             name: {value:"this",index:21},
                             getter:[],
                             setter:[]
                         })
                     ],
-                    methods:[],
                     states: undefined
                 }
             )]]);
@@ -586,13 +580,13 @@ describe("Def", () => {
     describe('methoddef', () => {
         it('accepts constructor:', () => {
             // input
-            let input = 'constructor():'
+            let input = 'new -> bar'
             let proc = false
             // output
             let output = (r:ResultTokens, c:any) => {
                 expect(flat(c)).to.deep.eq([
                     Emit.Emit(MethodDef, {
-                        name: {value:"constructor", index:0},
+                        name: {name:{value:"constructor", index:0}},
                         attributes:[],
                         accessors: [],
                         arguments: [],
@@ -603,7 +597,7 @@ describe("Def", () => {
                 expect(r.tokens.length).to.eq(0)
                 proc = true
             }
-            parse(input)(rule(Def.methoddef).yields(output))
+            parse(input)(rule(Def.typedef_member_dec).yields(output))
             expect(proc).to.be.eq(true)
         })
         it('accepts constructor(x:int):', () => {
@@ -614,7 +608,7 @@ describe("Def", () => {
             let output = (r:ResultTokens, c:any) => {
                 expect(flat(c)).to.deep.eq([
                     Emit.Emit(MethodDef, {
-                        name: {value:"constructor", index:0},
+                        name: {name: {value:"constructor", index:0} },
                         attributes:[],
                         accessors: [],
                         arguments: [
@@ -622,10 +616,9 @@ describe("Def", () => {
                                 name: { value: 'x', index: 12 },
                                 type: [
                                     Emit.Emit(TypeRef, { 
-                                        callreturn: undefined,
                                         nameref: [Emit.Emit(Reference, {name:{value:"int",index:14}})], 
-                                        types: [],
-                                        indexer: []
+                                        typeargs: [],
+                                        indexargs: []
                                     })
                                 ],
                                 spec: []
@@ -638,19 +631,19 @@ describe("Def", () => {
                 expect(r.tokens.length).to.eq(0)
                 proc = true
             }
-            parse(input)(rule(Def.methoddef).yields(output))
+            parse(input)(rule(Def.typedef_member_dec).yields(output))
             expect(proc).to.be.eq(true)
         })
         it('accepts void func(x:Y, u:U, j:P{.len < i}):', () => {
             // input
             let proc = false
-            let input = 'public void foo(x:Y, u:U, j:P{.len < i}): pass'
+            let input = 'public void foo(x:Y, u:U, j:P{.len < i}) = pass'
             // output
             let output = (r:ResultTokens, c:any) => { 
                 console.log(JSON.stringify(c,null,2))
                 expect(flat(c)).to.deep.eq([
                     Emit.Emit(MethodDef, {
-                        name: {value:"foo", index:12},
+                        name: {name:{value:"foo", index:12}},
                         attributes:[],
                         accessors: [{value:"public", index:0}],
                         arguments: [
@@ -658,10 +651,9 @@ describe("Def", () => {
                                 name: { value: 'x', index: 16 },
                                 type: [
                                     Emit.Emit(TypeRef, { 
-                                        callreturn: undefined,
                                         nameref: [Emit.Emit(Reference, {name:{value:"Y",index:18}})], 
-                                        types: [],
-                                        indexer: []
+                                        typeargs: [],
+                                        indexargs: []
                                     })
                                 ],
                                 spec: []
@@ -670,10 +662,9 @@ describe("Def", () => {
                                 name: { value: 'u', index: 21 },
                                 type: [
                                     Emit.Emit(TypeRef, { 
-                                        callreturn: undefined,
                                         nameref: [Emit.Emit(Reference, {name:{value:"U",index:23}})], 
-                                        types: [],
-                                        indexer: []
+                                        typeargs: [],
+                                        indexargs: []
                                     })
                                 ],
                                 spec: []
@@ -682,10 +673,9 @@ describe("Def", () => {
                                 name: { value: 'j', index: 26 },
                                 type: [
                                     Emit.Emit(TypeRef, { 
-                                        callreturn: undefined,
                                         nameref: [Emit.Emit(Reference, {name:{value:"P",index:28}})], 
-                                        types: [],
-                                        indexer: []
+                                        typeargs: [],
+                                        indexargs: []
                                     })
                                 ],
                                 spec: [
@@ -709,12 +699,11 @@ describe("Def", () => {
                         ],
                         return: Emit.Emit(ReturnDef, {
                             type: Emit.Emit(TypeRef, {
-                                callreturn: undefined,
                                 nameref: [
                                     Emit.Emit(Reference, {name:{value:"void", index:7}})
                                 ],
-                                types: [],
-                                indexer: []
+                                typeargs: [],
+                                indexargs: []
                             }),
                             spec: []
                         })
@@ -723,7 +712,7 @@ describe("Def", () => {
                 expect(r.tokens.length).to.eq(0)
                 proc = true
             }
-            parse(input)(rule(Def.methoddef).yields(output))
+            parse(input)(rule(Def.typedef_member).yields(output))
             expect(proc).to.eq(true)
         })
         it('accepts int{> 0} func(int:x{> 0}, int:y{> x}):\n    return x + y + 1', () => {
@@ -737,7 +726,7 @@ describe("Def", () => {
                 expect(r.tokens.length).to.eq(0)
                 proc = true
             }
-            parse(input)(rule(Def.methoddef).yields(output))
+            parse(input)(rule(Def.typedef_member_dec).yields(output))
             expect(proc).to.be.eq(true)
         })
     })

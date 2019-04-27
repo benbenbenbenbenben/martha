@@ -15,20 +15,17 @@ function parse(file:string):ProgramDef {
     return parsed
 }
 
-describe("genesis", () => {
-    let f = parse(__dirname + "../../genani/genesis.1.ma" )
-    console.log(f.imports[0])
-    console.log(f.types)
-    console.log(f.types[0].members)
-    console.log(f.types[0].methods)
-    console.log(f.types[0].states)
-    console.log(f.types[0].states[0])
-    console.log(f.types[0].states[0].methods[0])
-    console.log(f.types[0].states[0].methods[1])
+describe("genesis", () => {    
+    let f = parse(__dirname + "../../genani/genesis.1.ma")
+
+    it("should be a program", () => expect(f).to.not.be.undefined)
+
+    it("should have one type at root level", () => expect(f.types.length).to.eq(1))
+
+    f.types[0].members[0] /* ?+ */
     
-    //console.log(f.types[0].members)
-    //console.log(f.types[0].basetype)
     return;
+
     let iballot = parse(__dirname + "../../genesis/IBallot.ma")
     let iparty = parse(__dirname + "../../genesis/IParty.ma")
     let itoken = parse(__dirname + "../../genesis/IToken.ma")

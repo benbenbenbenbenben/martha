@@ -17,7 +17,6 @@ describe("kallis.Result", () => {
     let program = martha.parse({ source: masource, identity: "" });
     it("should be a program", () => {
         console.log(program.types[0]);
-        console.dir(program.types[0].methods[2].body[0].statement[0]);
         chai_1.expect(program).to.not.be.null;
         fs.writeFileSync(__dirname + "../../kallis/_kallis.Result.im", JSON.stringify(program, null, 2));
     });

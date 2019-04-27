@@ -407,6 +407,7 @@ exports.MinusMinus_Postfix = MinusMinus_Postfix;
 class Emit {
     static Emit(ctor, m) {
         //return new ctor()
+        delete m.__TYPE__;
         return Object.assign(new ctor(), m);
     }
 }
@@ -435,6 +436,12 @@ ArgumentDef = __decorate([
     serializable
 ], ArgumentDef);
 exports.ArgumentDef = ArgumentDef;
+let TupleArgumentDef = class TupleArgumentDef {
+};
+TupleArgumentDef = __decorate([
+    serializable
+], TupleArgumentDef);
+exports.TupleArgumentDef = TupleArgumentDef;
 let Statement = class Statement {
 };
 Statement = __decorate([
@@ -447,6 +454,12 @@ MethodDef = __decorate([
     serializable
 ], MethodDef);
 exports.MethodDef = MethodDef;
+let TransitioningMethodDef = class TransitioningMethodDef extends MethodDef {
+};
+TransitioningMethodDef = __decorate([
+    serializable
+], TransitioningMethodDef);
+exports.TransitioningMethodDef = TransitioningMethodDef;
 let List = class List {
 };
 List = __decorate([
@@ -483,6 +496,12 @@ TypeDef = __decorate([
     serializable
 ], TypeDef);
 exports.TypeDef = TypeDef;
+let StateBlockDef = class StateBlockDef {
+};
+StateBlockDef = __decorate([
+    serializable
+], StateBlockDef);
+exports.StateBlockDef = StateBlockDef;
 let Lambda = class Lambda extends MethodDef {
 };
 Lambda = __decorate([

@@ -14,24 +14,43 @@ const parserContext = new martha_grammar_1.ParserContext();
 const Def = parserContext.def;
 const Stmt = parserContext.stmt;
 describe('syntax.m', () => {
-    it('accepts type:\n    Binary\nwith:\n    object: left\n    object: right\n', () => {
+    it('accepts type:\n    Binary\nwith:\n    left: object\n    right: object\n', () => {
         // input
-        let input = 'type Binary:\n    object: left\n    object: right\n';
+        let input = 'type Binary:\n    left: object\n    right: object\n';
         let proc = false;
         // output
         let output = (r, c) => {
             chai_1.expect(flat(c)).to.deep.eq([martha_emit_1.Emit.Emit(martha_emit_1.TypeDef, {
                     name: martha_emit_1.Emit.Emit(martha_emit_1.Token, { value: "Binary", index: 5 }),
+                    basetype: undefined,
                     members: [
                         martha_emit_1.Emit.Emit(martha_emit_1.MemberDef, {
                             type: martha_emit_1.Emit.Emit(martha_emit_1.TypeRef, {
                                 nameref: [
                                     martha_emit_1.Emit.Emit(martha_emit_1.Reference, {
-                                        name: martha_emit_1.Emit.Emit(martha_emit_1.Token, { value: "object", index: 0 })
+                                        name: martha_emit_1.Emit.Emit(martha_emit_1.Token, { value: "object", index: 17 })
                                     })
                                 ],
+                                typeargs: [],
+                                indexargs: []
                             }),
-                            name: { value: "left", index: 0 }
+                            name: { value: "left", index: 25 },
+                            getter: [],
+                            setter: []
+                        }),
+                        martha_emit_1.Emit.Emit(martha_emit_1.MemberDef, {
+                            type: martha_emit_1.Emit.Emit(martha_emit_1.TypeRef, {
+                                nameref: [
+                                    martha_emit_1.Emit.Emit(martha_emit_1.Reference, {
+                                        name: martha_emit_1.Emit.Emit(martha_emit_1.Token, { value: "object", index: 34 })
+                                    })
+                                ],
+                                typeargs: [],
+                                indexargs: []
+                            }),
+                            name: { value: "right", index: 42 },
+                            getter: [],
+                            setter: []
                         })
                     ]
                 })]);

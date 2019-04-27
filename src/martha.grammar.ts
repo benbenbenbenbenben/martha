@@ -10,6 +10,8 @@ const flat = (arr:any[]): any[] => {
          acc.concat(flat(val)) : acc.concat(val), []);
 }
 
+const inf = (refrule:IRule | IToken):IRule => rule(/\s*/, refrule, /\s*/)
+
 
 class WithParserContext {
     public context:ParserContext
@@ -154,6 +156,8 @@ class Op {
 
     infix_comma  = rule(/\s*,\s*/);
     infix_colon  = rule(/\s*\:\s*/);
+    infix_arrow  = rule(/\s*\-\>\s*/);
+    infix_fatarrow  = rule(/\s*\=\>\s*/);
 
     lsquare          = token("lsquare", "[");
     rsquare          = token("rsquare", "]");
@@ -379,8 +383,8 @@ class Ref extends WithParserContext {
         super(context)
     }
     // members and variables
-    _member      = token("member", /[a-z_\$\@][a-z0-9\$\@]*/i);
-    varname      = token("varname", /[a-z_\$\@][a-z0-9\$\@]*/i);
+    _member      = token("member", /[a-z_\$\@][_a-z0-9\$\@]*/i);
+    varname      = token("varname", /[a-z_\$\@][_a-z0-9\$\@]*/i);
     member       = rule(this._member, many(this.context.op.dot, this._member))
                             .yields(AST.reference);
     typename     = token("typename", /[a-z_\$\@][a-z0-9\$\@]*/i);
@@ -421,6 +425,7 @@ class Util extends WithParserContext {
         this.indents.push(r.one("indent")!.value);
     });
     peekIndent       = rule(this.context.ws.newline, (input:Input):Result => {
+        this.indents /* ?+ */
         let index:number = input.source.substring(input.location).indexOf(this.indents[this.indents.length - 1]);
         if (index === 0) {
             input.location += this.indents[this.indents.length - 1].length;
@@ -436,12 +441,12 @@ class Util extends WithParserContext {
                                     Result.pass(input) : Result.fault(input));
     block            = (begin:Pattern, repeat:Pattern) => rule(
         many(this.context.ws.newline),
-        begin, /[ \t]*:[ \t]*/,
+        begin, /[ \t]*=[ \t]*/,
         either(
-            all(this.pushIndent, repeat, 
+            all(this.pushIndent, repeat,
                 many(
                     this.peekIndent,
-                    repeat
+                    repeat, this.context.ws.space0ton
                 ),
                 this.popIndent
             ),
@@ -666,18 +671,21 @@ class Def extends WithParserContext {
     )
     .yields(AST.argumentdef)
     ;
-    returndef = rule(() => this.context.def.typedef_type, optional(this.argumentspec))
+    returndef = rule(() => this.context.ref.member, optional(this.argumentspec))
     .yields(AST.returndef)
     ;
     argumentdefs = rule(this.argumentdef, many(this.context.op.infix_comma, this.argumentdef))
     .yields(AST.argumentdefs)
     ;
+    /*
     methoddef = rule(
-        optional(rule("@", this.context.stmt.statement, /\s*/).yields(AST.attribute)),
+        optional(rule("@", this.context.stmt.statement, this.context.ws.space0ton).yields(AST.attribute)),
         this.context.util.block(
             all(
                 rule(() => this.membermodifiers).yields(named("accessors")),
-                rule(() => this.context.def.typedef_type).yields(named("type")),
+                rule(() => this.context.def.typedef_type).yields(named("returntype")),
+                rule(() => this.context.ref.member).yields(named("name")),
+                rule(() => this.context.def.argumentspec).yields(named("returnspec")),
                 optional(
                     this.context.ws.lr0ton(this.context.op.arrow),
                     // next state(s)
@@ -689,6 +697,7 @@ class Def extends WithParserContext {
     )
     .yields(AST.methoddef)
     ;
+    */
 /*
     methoddec = rule(
         optional(rule(this.context.kwrd.anyaccess, many(this.context.ws.space1ton, this.context.kwrd.anyaccess), this.context.ws.space1ton).yields(AST.anyaccess)),
@@ -739,7 +748,7 @@ class Def extends WithParserContext {
     .yields(AST.flatcst)
     ;
 
-    membermodifiers = rule(many(
+    modifiers_N = rule(many(
         either(
             this.context.kwrd.anyaccess,
             this.context.kwrd.abstract,
@@ -758,6 +767,9 @@ class Def extends WithParserContext {
     .yields((result:ResultTokens, cst:any) => {
         return flat(cst);
     });
+
+    varnames = rule(this.context.ref.varname, many(this.context.op.infix_comma, this.context.ref.varname))
+    .yields(AST.varnames)
 
     importdef = rule(
         this.context.kwrd.import,
@@ -781,88 +793,168 @@ class Def extends WithParserContext {
         many(this.context.op.infix_comma, this.context.ref.typename))
     .yields(AST.typedef_name)
     ;
-    typedef_index = rule(
+    typedef_type = rule(
         rule(
-            rule(
-                this.context.ref.member, 
-                optional(this.context.ws.space1ton, this.context.ref.member)
-            ).yields(named("names"))
-        ),
-        // function
-        optional(
-            rule(this.context.ws.space0ton, this.context.op.fatarrow, this.context.ws.space0ton),
-            rule(all(() => this.context.def.typedef_index)).yields(named("return"))
-        ),
+            this.context.ref.member
+        ).yields(named("name")),
         // TODO: generic
         optional(
             rule(
-                this.context.op.langle,
+                inf(this.context.op.langle),
                 // TODO: upgrade to bracket/block
-                rule(all(() => this.context.def.typedef_index)).yields(named("types")),
+                rule(all(() => this.context.def.typedef_type)),
                 many(
                     this.context.op.infix_comma, 
-                    rule(all(() => this.context.def.typedef_index)).yields(named("types"))
+                    rule(all(() => this.context.def.typedef_type))
                 ),
-                this.context.op.rangle
-            )
+                inf(this.context.op.rangle)
+            ).yields(named("types"))
         ),
         // indexer
         optional(
             rule(
-                this.context.op.lsquare,
+                inf(this.context.op.lsquare),
                 optional(
-                    () => this.context.def.typedef_index
+                    () => this.context.def.typedef_type
                 ),
-                this.context.op.rsquare
+                inf(this.context.op.rsquare)
             ).yields(named("indexer"))
         ),
         // func type
         optional(
             rule(
-                this.context.op.lparen,
+                inf(this.context.op.lparen),
                 optional(
-                    () => this.argumentdefs
+                    () => this.context.def.typedef_type
                 ),
-                this.context.op.rparen
-            ).yields(named("function"))
+                many(
+                    this.context.op.infix_comma,
+                    rule(all(() => this.context.def.typedef_type))
+                ),
+                inf(this.context.op.rparen)
+            ).yields(named("callsignature"))
+        ),
+        // return type
+        optional(
+            this.context.op.infix_fatarrow,
+            rule(all(() => this.context.def.typedef_type))
         )
-    )
-    .yields(AST.typedef_index)
-    ;
-    typedef_type   = rule(
-        this.typedef_index
     )
     .yields(AST.typedef_type)
     ;
-    typedef_member = rule(
+    /*
+    typedef_method = rule(
         this.membermodifiers,
-        this.membernames, 
-        this.context.op.infix_colon, 
-        rule(this.typedef_index).yields(named("type")),
-        optional(
-            either(
-                // auto compute functions
-                all(this.context.ws.lr0ton(this.context.op.fatarrow), this.context.stmt.statement),
-                // static variables
-                all(this.context.ws.lr0ton(this.context.op.assign), this.context.stmt.statement),
-                // getter settter blocks
-                all(
-                    this.context.ws.space1ton,
-                    this.context.util.block(
-                        this.context.kwrd.with,
-                        either(
-                            this.context.util.block(
-                                "get", 
-                                this.context.stmt.statement
-                            ).yields(named("getter")),
-                            this.context.util.block(
-                                "set", 
-                                this.context.stmt.statement
-                            ).yields(named("setter")),
-                        )
+        this.membernames
+    )*/
+    typedef_member_dec = rule(
+        this.modifiers_N,
+        rule(this.varnames).yields(named("varnames")),
+        /*
+            ()
+            x y z
+            (x, y)
+            (x, y) z
+            x:int y:int
+            (x:int, y:int)
+        */
+        // 
+        rule(
+            many(
+                either(
+                    rule(
+                        this.context.op.lparen,
+                        optional(
+                            this.context.ws.space0ton,
+
+                            rule(
+                                this.modifiers_N,
+                                this.context.ref.varname,
+                                optional(
+                                    this.context.op.infix_colon,
+                                    this.typedef_type,
+                                    optional(this.argumentspec)
+                                ),
+                            ).yields(AST.argumentdef),
+
+                            many(
+                                this.context.op.infix_comma,
+
+                                rule(
+                                    this.modifiers_N,
+                                    this.context.ref.varname,
+                                    optional(
+                                        this.context.op.infix_colon,
+                                        this.typedef_type,
+                                        optional(this.argumentspec)
+                                    )
+                                ).yields(AST.argumentdef),
+                            )
+
+                        ),
+                        this.context.op.rparen
+                    ).yields(AST.tupleargumentdef),
+                    rule(
+                        many(
+                            rule(
+                                this.context.ws.space0ton,
+                                this.modifiers_N,
+                                this.context.ref.varname,
+                                optional(
+                                    this.context.op.infix_colon,
+                                    this.typedef_type,
+                                    optional(this.argumentspec)
+                                )
+                            ).yields(AST.argumentdef)
+                        ),
                     )
                 )
             )
+        ).yields(named("vars")),
+        // optional type hint
+        optional(
+            this.context.op.infix_colon,
+            rule(this.typedef_type, optional(this.argumentspec)).yields(named("typehint"))
+        ),
+        // transitioner
+        optional(
+            this.context.op.infix_arrow,
+            rule(this.context.ref.member).yields(named("transition"))
+        ),
+        optional(
+            // getter settter blocks
+            all(
+                this.context.ws.space1ton,
+                this.context.kwrd.with,
+                either(
+                    this.context.util.block(
+                        "get", 
+                        this.context.stmt.statement
+                    ).yields(named("getter")),
+                    this.context.util.block(
+                        "set", 
+                        this.context.stmt.statement
+                    ).yields(named("setter")),
+                )
+            )
+        )
+    )
+    .yields(AST.typedef_member_dec)
+    ;
+    typedef_member = rule(
+        /*
+            foo: int
+            static foo: int
+            static foo = 1
+            () = void
+            multiply x y = x * y
+            multiply(x, y) = x * y // tuple
+        */
+        this.context.util.block(
+            this.typedef_member_dec,
+            rule(
+                () => this.context.statements
+            ).yields(named("body"))
         )
     )
     .yields(AST.typedef_member)
@@ -880,13 +972,12 @@ class Def extends WithParserContext {
             rule(
                 many(either(
                     () => this.typedef_stateblock,
-                    this.methoddef,
-                    this.typedef_member
+                    this.typedef_member,
+                    this.typedef_member_dec,
                 ))
             ).yields(named("body"))
         ).yields(AST.stateblock)
     )
-    .yields(named("stateblocks"))
     ;
     typedef = rule(
         this.context.util.block(
@@ -904,8 +995,8 @@ class Def extends WithParserContext {
             rule(
                 many(either(
                     this.typedef_stateblock,
-                    this.methoddef,
-                    this.typedef_member
+                    this.typedef_member,
+                    this.typedef_member_dec,
                 ))
             )
         )
