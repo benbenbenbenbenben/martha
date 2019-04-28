@@ -14,15 +14,15 @@ function parse(file:string):ProgramDef {
     fs.writeFileSync(file + ".json", JSON.stringify(parsed,null,2))
     return parsed
 }
-
+// file.only
 describe("genesis", () => {    
     let f = parse(__dirname + "../../genani/genesis.1.ma")
 
     it("should be a program", () => expect(f).to.not.be.undefined)
 
-    it("should have one type at root level", () => expect(f.types.length).to.eq(1))
+    it("should have one type at root level", () => expect(f.types.length).to.eq(2))
 
-    f.types[0].members[0] /* ?+ */
+    f.macros /* ?+ */
     
     return;
 

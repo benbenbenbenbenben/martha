@@ -421,12 +421,12 @@ class Util extends WithParserContext {
         super(context)
     }
     indents:string[] = [];
-    pushIndent       = rule(this.context.ws.space0ton, this.context.ws.newline, this.context.ws.indent).yields((r:ResultTokens) => {
-        this.indents.push(r.one("indent")!.value);
+    pushIndent       = rule(this.context.ws.newline, this.context.ws.indent).yields((r:ResultTokens) => {
+        this.indents.push(r.one("indent")!.value)
     });
-    peekIndent       = rule(this.context.ws.newline, (input:Input):Result => {
-        this.indents /* ?+ */
+    peekIndent       = rule(this.context.ws.space0ton, this.context.ws.newline, (input:Input):Result => {
         let index:number = input.source.substring(input.location).indexOf(this.indents[this.indents.length - 1]);
+        index // ?
         if (index === 0) {
             input.location += this.indents[this.indents.length - 1].length;
             return Result.pass(input);
@@ -434,13 +434,14 @@ class Util extends WithParserContext {
         return Result.fault(input);
     });
     popIndent        = rule((input:Input):Result => {
-        this.indents.pop();
-        return Result.pass(input);
+        input.source.substring(input.location)
+        this.indents.pop()
+        return Result.pass(input)
     });
     EOF              = rule((input:Input):Result => input.location === input.source.length ?
                                     Result.pass(input) : Result.fault(input));
     block            = (begin:Pattern, repeat:Pattern) => rule(
-        many(this.context.ws.newline),
+       //  many(this.context.ws.newline),
         begin, /[ \t]*=[ \t]*/,
         either(
             all(this.pushIndent, repeat,

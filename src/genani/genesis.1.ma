@@ -1,7 +1,10 @@
 import OrganisationRegister from organisation
 
-type WitnessedAttribute is VisitAttribute =
-    foooddddd: b
+macro witnessed for $typedef =
+    as foo =
+        pass
+
+ 
 machine Genesis =
     static root: Organisation
     static unlockScript: boolean(ScriptHash)
